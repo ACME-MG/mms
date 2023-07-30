@@ -48,25 +48,25 @@ class __Surrogate__:
         """
         pass
 
-    def train(self, input_dict:dict, output_dict:dict, **kwargs) -> None:
+    def train(self, input_list:list, output_list:list, **kwargs) -> None:
         """
         Trains the model
         
         Parameters:
-        * `input_dict`:  Dictionary of lists representing the input data
-        * `output_dict`: Dictionary of lists representing the output data
+        * `input_list`:  List of lists representing the input data
+        * `output_list`: List of lists representing the output data
         * `epochs`:      Number of epochs
         * `batch_size`:  The size of the batch
         * `verbose`:     Whether or not to train with additional output from tensorflow
         """
         raise NotImplementedError
 
-    def predict(self, input_dict:dict, **kwargs) -> dict:
+    def predict(self, input_list:list, **kwargs) -> list:
         """
         Makes predictions based on a fitted model
         
         Parameters:
-        * `input_dict`:  Dictionary of lists representing the input data
+        * `input_list`: List of lists representing the input data
         
         Returns the predictions based on the inputs
         """

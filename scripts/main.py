@@ -3,12 +3,21 @@ from mms.api import API
 
 api = API(output_here=True)
 
-input_list  = ["D0", "QD", "FN0", "QFN", "T0", "gamma", "Nc", "temperature", "stress"]
-output_list = ["time_to_tertiary"]
+api.read_data("gb_data.csv")
 
-api.read_data("gb_data.csv", input_list, output_list)
+api.add_input("D0", ["linear"])
+api.add_input("QD", ["linear"])
+api.add_input("FN0", ["linear"])
+api.add_input("QFN", ["linear"])
+# api.add_input("T0", ["linear"])
+# api.add_input("gamma", ["linear"])
+api.add_input("Nc", ["linear"])
+api.add_input("temperature", ["linear"])
+api.add_input("stress", ["linear"])
 
-api.define_surrogate("pt_nn")
-api.train(4000, epochs=1000, batch_size=16)
+api.add_output("time_to_tertiary", ["log", "linear"])
 
-api.predict(100)
+api.set_surrogate("pt_nn")
+api.train(1000, epochs=1000, batch_size=64)
+
+api.test(100)

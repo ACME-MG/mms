@@ -6,13 +6,10 @@
 """
 
 # Libraries
-import numpy as np
 import warnings; warnings.filterwarnings("ignore")
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
-from mms.mapper import MapperDict
-from mms.interface.converter import dict_to_grid, grid_to_dict
 from mms.surrogates.__surrogate__ import __Surrogate__
 
 # Set tensor type
@@ -22,69 +19,63 @@ torch.set_default_tensor_type(torch.DoubleTensor)
 class Surrogate(__Surrogate__):
     
     # Trains the model
-    def train(self, input_dict:dict, output_dict:dict, epochs:int, batch_size:int) -> None:
+    def train(self, input_grid:dict, output_grid:list, epochs:int, batch_size:int) -> None:
         
         # Initialise model
         input_size = self.get_input_size()
         output_size = self.get_output_size()
-        self.model = CustomModel(input_size, output_size, [64, 32, 16])
-        
-        # Initialise other
+        self.model = CustomModel(input_size, output_size, [32, 16, 8])
         parameters = self.model.parameters()
-        self.criterion = torch.nn.MSELoss()
-        self.optimiser = optim.Adam(parameters, lr=0.001)
         
-        # Create mappers
-        self.input_mapper = MapperDict(input_dict)
-        self.output_mapper = MapperDict(output_dict)
+        # Define optimisation
+        loss_fuction = MeanRelativeErrorLoss()
+        optimiser = optim.Adam(parameters, lr=0.001)
         
-        # Map the data dictionaries
-        norm_input_dict = self.input_mapper.map(input_dict)
-        norm_output_dict = self.output_mapper.map(output_dict)
-        
-        # Convert the dictionaries to grids
-        norm_input_grid = dict_to_grid(norm_input_dict)
-        norm_output_grid = dict_to_grid(norm_output_dict)
-        
-        # Convert grids to tensors
-        norm_input_tensor = torch.tensor(norm_input_grid)
-        norm_output_tensor = torch.tensor(norm_output_grid)
-        
-        # Convert to data loader
-        dataset = CustomDataset(norm_input_tensor, norm_output_tensor)
+        # Convert data to data loader
+        input_tensor = torch.tensor(input_grid)
+        output_tensor = torch.tensor(output_grid)
+        dataset = CustomDataset(input_tensor, output_tensor)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
         # Start training    
+        # torch.autograd.set_detect_anomaly(True) # for debugging
         for _ in range(epochs):
             total_loss = 0
             for batch_inputs, batch_outputs in dataloader:
-                self.optimiser.zero_grad()
+                optimiser.zero_grad()
                 outputs = self.model(batch_inputs)
-                loss = self.criterion(outputs, batch_outputs)
+                loss = loss_fuction(outputs, batch_outputs)
                 loss.backward()
-                self.optimiser.step()
+                optimiser.step()
                 total_loss += loss.item()
         
     # Returns a prediction
-    def predict(self, input_dict:dict) -> dict:
-        
-        # Map and convert input data
-        norm_input_dict = self.input_mapper.map(input_dict)
-        norm_input_grid = np.array(dict_to_grid(norm_input_dict))
-        norm_input_tensor = torch.tensor(norm_input_grid)
-        
-        # Get the prediction
+    def predict(self, input_grid:list) -> list:
+        input_tensor = torch.tensor(input_grid)
         with torch.no_grad():
-            norm_output_tensor = self.model(norm_input_tensor)
+            output_tensor = self.model(input_tensor)
+        output_grid = output_tensor.tolist()
+        print(output_grid)
+        return output_grid
 
-        # Convert to dictionary
-        norm_output_grid = norm_output_tensor.tolist()
-        output_headers = self.output_mapper.get_headers()
-        norm_output_dict = grid_to_dict(norm_output_grid, output_headers)
-        
-        # Unmap and return
-        output_dict = self.output_mapper.unmap(norm_output_dict)
-        return output_dict
+# Relative error function
+def get_relative_error(prd_value, exp_value):
+    abs_diff = torch.abs(prd_value - exp_value)
+    relative_error = abs_diff / torch.abs(exp_value)
+    return relative_error
+
+# Relative error class
+class MeanRelativeErrorLoss(torch.nn.Module):
+    
+    # Constructor
+    def __init__(self):
+        super(MeanRelativeErrorLoss, self).__init__()
+
+    # Calculates the relative error
+    def forward(self, prd_value, exp_value):
+        relative_errors = get_relative_error(prd_value, exp_value)
+        mean_relative_error = torch.mean(relative_errors)
+        return mean_relative_error
 
 # Custom PyTorch model
 class CustomModel(torch.nn.Module):
