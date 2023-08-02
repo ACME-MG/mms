@@ -7,9 +7,10 @@
 
 # Libraries
 import warnings; warnings.filterwarnings("ignore")
-import torch
-import torch.optim as optim
+import math
+import torch, torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
+import matplotlib.pyplot as plt
 from mms.surrogates.__surrogate__ import __Surrogate__
 
 # Set tensor type
@@ -19,7 +20,7 @@ torch.set_default_tensor_type(torch.DoubleTensor)
 class Surrogate(__Surrogate__):
     
     # Trains the model
-    def train(self, input_grid:dict, output_grid:list, epochs:int, batch_size:int) -> None:
+    def train(self, epochs:int, batch_size:int) -> None:
         
         # Initialise model
         input_size = self.get_input_size()
@@ -27,55 +28,67 @@ class Surrogate(__Surrogate__):
         self.model = CustomModel(input_size, output_size, [32, 16, 8])
         parameters = self.model.parameters()
         
-        # Define optimisation
-        loss_fuction = MeanRelativeErrorLoss()
-        optimiser = optim.Adam(parameters, lr=0.001)
+        # Get the data and convert to tensors
+        train_input, train_output = self.get_train_data()
+        valid_input, valid_output = self.get_valid_data()
+        train_input_tensor = torch.tensor(train_input)
+        train_output_tensor = torch.tensor(train_output)
+        valid_input_tensor = torch.tensor(valid_input)
+        valid_output_tensor = torch.tensor(valid_output)
         
-        # Convert data to data loader
-        input_tensor = torch.tensor(input_grid)
-        output_tensor = torch.tensor(output_grid)
-        dataset = CustomDataset(input_tensor, output_tensor)
+        # Define optimisation
+        learning_rate = 1e-3
+        weight_decay  = 0 # 1e-5
+        loss_function = torch.nn.MSELoss()
+        optimiser     = optim.Adam(parameters, lr=learning_rate, weight_decay=weight_decay)
+        
+        # Initialise everything before training
+        dataset = CustomDataset(train_input_tensor, train_output_tensor)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-        # Start training    
+        train_loss_list = []
+        valid_loss_list = []
+        
+        # Start training
         # torch.autograd.set_detect_anomaly(True) # for debugging
         for _ in range(epochs):
-            total_loss = 0
+            
+            # Completes training
             for batch_inputs, batch_outputs in dataloader:
                 optimiser.zero_grad()
                 outputs = self.model(batch_inputs)
-                loss = loss_fuction(outputs, batch_outputs)
+                loss = loss_function(outputs, batch_outputs)
                 loss.backward()
                 optimiser.step()
-                total_loss += loss.item()
-        
-    # Returns a prediction
-    def predict(self, input_grid:list) -> list:
-        input_tensor = torch.tensor(input_grid)
+            
+            # Gets the training loss
+            with torch.no_grad():
+                prd_train_output_tensor = self.model(train_input_tensor)
+                train_loss = loss_function(prd_train_output_tensor, train_output_tensor)
+                train_loss_list.append(math.log(train_loss.item()))
+            
+            # Gets the validation loss
+            with torch.no_grad():
+                prd_valid_output_tensor = self.model(valid_input_tensor)
+                valid_loss = loss_function(prd_valid_output_tensor, valid_output_tensor)
+                valid_loss_list.append(math.log(valid_loss.item()))
+            
+        # Make plot
+        plt.title("Log Loss vs Epochs")
+        plt.xlabel("epochs")
+        plt.ylabel("log(loss)")
+        plt.plot(list(range(epochs)), train_loss_list, c="blue", label="training")
+        plt.plot(list(range(epochs)), valid_loss_list, c="red", label="validation")
+        plt.legend()
+        plt.savefig(f"{self.get_output_path()}/loss.png")
+
+    # Returns a prediction based on the validation data only
+    def predict(self) -> list:
+        valid_input, _ = self.get_valid_data()
+        input_tensor = torch.tensor(valid_input)
         with torch.no_grad():
             output_tensor = self.model(input_tensor)
         output_grid = output_tensor.tolist()
-        print(output_grid)
         return output_grid
-
-# Relative error function
-def get_relative_error(prd_value, exp_value):
-    abs_diff = torch.abs(prd_value - exp_value)
-    relative_error = abs_diff / torch.abs(exp_value)
-    return relative_error
-
-# Relative error class
-class MeanRelativeErrorLoss(torch.nn.Module):
-    
-    # Constructor
-    def __init__(self):
-        super(MeanRelativeErrorLoss, self).__init__()
-
-    # Calculates the relative error
-    def forward(self, prd_value, exp_value):
-        relative_errors = get_relative_error(prd_value, exp_value)
-        mean_relative_error = torch.mean(relative_errors)
-        return mean_relative_error
 
 # Custom PyTorch model
 class CustomModel(torch.nn.Module):

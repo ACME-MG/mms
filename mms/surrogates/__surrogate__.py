@@ -11,7 +11,7 @@ import importlib, os, pathlib, sys
 # Surrogate class
 class __Surrogate__:
 
-    def __init__(self, name:str, input_size:int, output_size:int):
+    def __init__(self, name:str, input_size:int, output_size:int, output_path:str):
         """
         Template for a surrogate model
         
@@ -19,10 +19,12 @@ class __Surrogate__:
         * `name`: The name of the surrogate model
         * `input_size`: The number of inputs
         * `output_size`: The number of outputs
+        * `output_path`: The path to the outputs
         """
         self.name = name
         self.input_size = input_size
         self.output_size = output_size
+        self.output_path = output_path
     
     def get_name(self) -> str:
         """
@@ -42,37 +44,65 @@ class __Surrogate__:
         """
         return self.output_size
 
+    def get_output_path(self) -> str:
+        """
+        Gets the path to the outputs
+        """
+        return self.output_path
+
     def initialise(self, **kwargs) -> None:
         """
         Initialises the model (optional)
         """
         pass
 
-    def train(self, input_list:list, output_list:list, **kwargs) -> None:
+    def set_train_data(self, train_input:list, train_output:list) -> None:
+        """
+        Initialises the training data
+        
+        Parameters:
+        * `train_input`:  Input data for training
+        * `train_output`: Output data for training
+        """
+        self.train_input  = train_input
+        self.train_output = train_output
+
+    def get_train_data(self) -> tuple:
+        """
+        Returns the training data
+        """
+        return self.train_input, self.train_output
+
+    def set_valid_data(self, valid_input:list, valid_output:list) -> None:
+        """
+        Initialises the validation data
+        
+        Parameters:
+        * `valid_input`:  Input data for validation
+        * `valid_output`: Output data for validation
+        """
+        self.valid_input  = valid_input
+        self.valid_output = valid_output
+
+    def get_valid_data(self) -> tuple:
+        """
+        Returns the validation data
+        """
+        return self.valid_input, self.valid_output
+
+    def train(self, **kwargs) -> None:
         """
         Trains the model
-        
-        Parameters:
-        * `input_list`:  List of lists representing the input data
-        * `output_list`: List of lists representing the output data
-        * `epochs`:      Number of epochs
-        * `batch_size`:  The size of the batch
-        * `verbose`:     Whether or not to train with additional output from tensorflow
         """
         raise NotImplementedError
 
-    def predict(self, input_list:list, **kwargs) -> list:
+    def test(self, **kwargs) -> None:
         """
-        Makes predictions based on a fitted model
-        
-        Parameters:
-        * `input_list`: List of lists representing the input data
-        
-        Returns the predictions based on the inputs
+        Tests the model
         """
         raise NotImplementedError
 
-def get_surrogate(surrogate_name:str, input_size:int, output_size:int, **kwargs) -> __Surrogate__:
+def get_surrogate(surrogate_name:str, input_size:int, output_size:int, output_path:str, **kwargs) -> __Surrogate__:
     """
     Creates and returns a surrogate model
     
@@ -80,6 +110,7 @@ def get_surrogate(surrogate_name:str, input_size:int, output_size:int, **kwargs)
     * `surrogate_name`: The name of the surrogate model
     * `input_size`: The number of inputs
     * `output_size`: The number of outputs
+    * `output_path`: The path to the outputs
         
     Returns the surrogate model object
     """
@@ -103,6 +134,6 @@ def get_surrogate(surrogate_name:str, input_size:int, output_size:int, **kwargs)
     
     # Initialise and return the surrogate
     from surrogate_file import Surrogate
-    surrogate = Surrogate(surrogate_name, input_size, output_size)
+    surrogate = Surrogate(surrogate_name, input_size, output_size, output_path)
     surrogate.initialise(**kwargs)
     return surrogate

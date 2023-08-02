@@ -15,13 +15,21 @@ from mms.parameter import Parameter
 # Controller class
 class Controller:
     
-    def __init__(self):
+    def __init__(self, output_path:str):
         """
         Initialises everything for the controller class
+        
+        Parameters:
+        * `output_path`: The path to the outputs
         """
-        self.raw_exp_dict = {}
-        self.input_exp_dict = {}
+        self.output_path     = output_path
+        self.raw_exp_dict    = {}
+        self.input_exp_dict  = {}
         self.output_exp_dict = {}
+        self.train_input     = []
+        self.train_output    = []
+        self.valid_input      = []
+        self.valid_output     = []
     
     def read_data(self, data_path:str) -> None:
         """
@@ -33,7 +41,36 @@ class Controller:
         self.raw_exp_dict = csv_to_dict(data_path)
         if list(self.raw_exp_dict.keys()) == []:
             raise ValueError("The CSV file contains no data!")
-        self.total_data = len(self.raw_exp_dict[list(self.raw_exp_dict.keys())[0]])
+    
+    def filter_data(self, param_name:str, value:float) -> None:
+        """
+        Removes data points with specific parameter values
+        
+        Parameters:
+        * `param_name`: The name of the parameter
+        * `value`:      The value of the parameter
+        """
+        
+        # Create a new dictionary
+        new_raw_exp_dict = {}
+        for key in self.raw_exp_dict.keys():
+            new_raw_exp_dict[key] = []
+        
+        # Populate new dictionary
+        num_data = len(self.raw_exp_dict[list(self.raw_exp_dict.keys())[0]])
+        for i in range(num_data):
+            if self.raw_exp_dict[param_name][i] != value:
+                for key in self.raw_exp_dict.keys():
+                    new_raw_exp_dict[key].append(self.raw_exp_dict[key][i])
+        
+        # Replace dictionary
+        self.raw_exp_dict = new_raw_exp_dict
+    
+    def __get_num_data__(self) -> int:
+        """
+        Gets the number of data (from the input dict)
+        """
+        return self.input_exp_dict[list(self.input_exp_dict.keys())[0]].get_num_data()
     
     def __get_param__(self, param_name:str, mappers:list=None, **kwargs) -> Parameter:
         """
@@ -85,7 +122,7 @@ class Controller:
             raise ValueError("There are no inputs defined!")
         if output_size == 0:
             raise ValueError("There are no outputs defined!")
-        self.surrogate = get_surrogate(surrogate_name, input_size, output_size, **kwargs)
+        self.surrogate = get_surrogate(surrogate_name, input_size, output_size, self.output_path, **kwargs)
     
     def __get_data__(self, indexes:list, param_dict:dict, map:bool=True) -> list:
         """
@@ -99,64 +136,81 @@ class Controller:
         mapped_grid = []
         for param_name in param_dict.keys():
             param = param_dict[param_name]
-            value_list = param.get_value_list()
-            value_list = [value_list[i] for i in indexes]
+            value_list = param.get_and_remove_value_list(indexes)
             if map:
                 value_list = param.map_values(value_list)
             mapped_grid.append(value_list)
         mapped_grid = transpose(mapped_grid)
         return mapped_grid
     
-    def train_surrogate(self, num_data:int, **kwargs) -> None:
+    def add_training_data(self, num_data:int) -> None:
+        """
+        Adds data for training
+        
+        Parameters:
+        * `num_data`: The number of training data
+        """
+        random_indexes = random.sample(range(self.__get_num_data__()), num_data)
+        self.train_input += self.__get_data__(random_indexes, self.input_exp_dict)
+        self.train_output += self.__get_data__(random_indexes, self.output_exp_dict)
+    
+    def add_validation_data(self, num_data:int) -> None:
+        """
+        Adds data for validation
+        
+        Parameters:
+        * `num_data`: The number of validation data
+        """
+        random_indexes = random.sample(range(self.__get_num_data__()), num_data)
+        self.valid_input += self.__get_data__(random_indexes, self.input_exp_dict)
+        self.valid_output += self.__get_data__(random_indexes, self.output_exp_dict)
+        
+    def train_surrogate(self, **kwargs) -> None:
         """
         Trains the model
+        """
+        self.surrogate.set_train_data(self.train_input, self.train_output)
+        self.surrogate.set_valid_data(self.valid_input, self.valid_output)
+        self.surrogate.train(**kwargs)
+
+    def __unmap_output__(self, output_grid:list) -> None:
+        """
+        Unmaps the outputs
         
         Parameters:
-        * `num_data`: The number of training data
+        * `output_grid`: The mapped outputs
         """
-        random_indexes = random.sample(range(self.total_data), num_data)
-        input_grid = self.__get_data__(random_indexes, self.input_exp_dict)
-        output_grid = self.__get_data__(random_indexes, self.output_exp_dict)
-        self.surrogate.train(input_grid, output_grid, **kwargs)
-    
-    def test_surrogate(self, num_data:int, **kwargs) -> None:
-        """
-        Tests the model
-        
-        Parameters:
-        * `num_data`: The number of training data
-        """
-        
-        # Get the data
-        random_indexes = random.sample(range(self.total_data), num_data)
-        input_grid = self.__get_data__(random_indexes, self.input_exp_dict)
-        output_grid = self.__get_data__(random_indexes, self.output_exp_dict, map=False)
-
-        # Get the predictions
-        prd_output_grid = self.surrogate.predict(input_grid)
-        prd_output_grid = transpose(prd_output_grid)
-
-        # Unmap the predictions
-        unmapped_prd_output_grid = []
+        unmapped_output_grid = []
+        output_grid = transpose(output_grid)
         output_key_list = list(self.output_exp_dict.keys())
-        for i in range(len(prd_output_grid)):
+        for i in range(len(output_grid)):
             param = self.output_exp_dict[output_key_list[i]]
-            prd_output_list = prd_output_grid[i]
-            unmapped_prd_output_list = param.unmap_values(prd_output_list)
-            unmapped_prd_output_grid.append(unmapped_prd_output_list)
+            unmapped_output_list = param.unmap_values(output_grid[i])
+            unmapped_output_grid.append(unmapped_output_list)
+        unmapped_output_grid = transpose(unmapped_output_grid)
+        return unmapped_output_grid
+
+    def validate_surrogate(self, **kwargs) -> None:
+        """
+        Validates the model
+        """
+
+        # Get the outputs
+        prd_output = self.surrogate.predict(**kwargs)
+        prd_output = transpose(self.__unmap_output__(prd_output))
+        valid_output = transpose(self.__unmap_output__(self.valid_output))
         
         # Assess the results
-        output_grid = transpose(output_grid)
-        for i in range(len(output_grid)):
+        for i in range(len(prd_output)):
             
             # Initialise error storage
             error_list = []
             summary_grid = [["index", "exp", "prd", "RE"]]
-            for j in range(num_data):
+            for j in range(len(self.valid_output)):
                 
                 # Calculate error
-                exp_value = output_grid[i][j]
-                prd_value = unmapped_prd_output_grid[i][j]
+                exp_value = valid_output[i][j]
+                prd_value = prd_output[i][j]
                 error = round(100 * abs(exp_value - prd_value) / exp_value, 2)
                 error_list.append(error)
                 summary_grid.append([j+1, "{:0.3}".format(exp_value), "{:0.3}".format(prd_value), f"{error}%"])

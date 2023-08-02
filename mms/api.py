@@ -43,7 +43,7 @@ class API:
         self.__get_output__ = lambda x : f"{self.__output_path__}/{x}"
         
         # Define controller
-        self.__controller__ = Controller()
+        self.__controller__ = Controller(self.__output_path__)
         
         # Create directories
         safe_mkdir(output_path)
@@ -81,6 +81,17 @@ class API:
         data_path = self.__get_input__(data_file)
         self.__controller__.read_data(data_path)
     
+    def filter_data(self, param_name:str, value:float) -> None:
+        """
+        Removes data points with specific parameter values
+        
+        Parameters:
+        * `param_name`: The name of the parameter
+        * `value`:      The value of the parameter
+        """
+        self.__print__(f"Removing datapoints with {param_name}={value}")
+        self.__controller__.filter_data(param_name, value)
+    
     def add_input(self, param_name:str, mappers:list=None, **kwargs) -> None:
         """
         Adds a parameter as an input
@@ -115,25 +126,39 @@ class API:
         self.__print__(f"Defining the {surrogate_name} surrogate model ...")
         self.__controller__.set_surrogate(surrogate_name, **kwargs)
     
-    def train(self, num_data:int, **kwargs) -> None:
+    def add_training_data(self, num_data:int) -> None:
         """
-        Trains the model
+        Adds data for training
         
         Parameters:
         * `num_data`: The number of training data
         """
-        self.__print__(f"Training the model with {num_data} data points ...")
-        self.__controller__.train_surrogate(num_data, **kwargs)
-
-    def test(self, num_data:int, **kwargs) -> None:
+        self.__print__(f"Adding {num_data} data points to the training dataset ...")
+        self.__controller__.add_training_data(num_data)
+    
+    def add_validation_data(self, num_data:int) -> None:
         """
-        Tests the trained model
+        Adds data for validation
         
         Parameters:
-        * `num_data`: The number of testing data
+        * `num_data`: The number of validation data
         """
-        self.__print__(f"Using the model to predict {num_data} data points ...")
-        self.__controller__.test_surrogate(num_data, **kwargs)
+        self.__print__(f"Adding {num_data} data points to the validation dataset ...")
+        self.__controller__.add_validation_data(num_data)
+    
+    def train(self,  **kwargs) -> None:
+        """
+        Trains the model
+        """
+        self.__print__(f"Training the model ...")
+        self.__controller__.train_surrogate(**kwargs)
+
+    def test(self, **kwargs) -> None:
+        """
+        Tests the trained model
+        """
+        self.__print__(f"Validating the model ...")
+        self.__controller__.validate_surrogate(**kwargs)
 
 # For safely making a directory
 def safe_mkdir(dir_path:str) -> None:

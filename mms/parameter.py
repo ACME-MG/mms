@@ -37,11 +37,19 @@ class Parameter:
         """
         return self.param_name
         
-    def get_value_list(self) -> list:
+    def get_num_data(self) -> list:
         """
-        Gets the values of the parameter
+        Gets the number of data points
         """
-        return self.value_list
+        return len(self.value_list)
+    
+    def get_and_remove_value_list(self, indexes:list) -> list:
+        """
+        Gets the values of the parameter at specific indexes, then removes them
+        """
+        extracted_value_list = [self.value_list[i] for i in indexes]
+        self.value_list = [self.value_list[i] for i in range(len(self.value_list)) if not i in indexes]
+        return extracted_value_list
     
     def get_mappers(self) -> list:
         """
