@@ -1,6 +1,6 @@
 mms/__pycache__
 mms/interface/__pycache__
-mms/surrogates/__pycache__
+mms/surrogate/__pycache__
 mms/mappers/__pycache__
 mms/scripts/nohup.out
 mms/scripts/plot

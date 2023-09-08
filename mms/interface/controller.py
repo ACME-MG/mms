@@ -6,30 +6,28 @@
 """
 
 # Libraries
-import numpy as np, random
+import math, numpy as np, random
+import matplotlib.pyplot as plt
 from tabulate import tabulate
-from mms.interface.converter import csv_to_dict, transpose
-from mms.surrogates.__surrogate__ import get_surrogate
-from mms.parameter import Parameter
+from copy import deepcopy
+from mms.interface.converter import csv_to_dict, transpose, dict_to_csv
+from mms.surrogate.neural import Neural
+from mms.surrogate.parameter import Parameter
 
 # Controller class
 class Controller:
     
-    def __init__(self, output_path:str):
+    def __init__(self):
         """
         Initialises everything for the controller class
-        
-        Parameters:
-        * `output_path`: The path to the outputs
         """
-        self.output_path     = output_path
         self.raw_exp_dict    = {}
         self.input_exp_dict  = {}
         self.output_exp_dict = {}
         self.train_input     = []
         self.train_output    = []
-        self.valid_input      = []
-        self.valid_output     = []
+        self.valid_input     = []
+        self.valid_output    = []
     
     def read_data(self, data_path:str) -> None:
         """
@@ -42,7 +40,7 @@ class Controller:
         if list(self.raw_exp_dict.keys()) == []:
             raise ValueError("The CSV file contains no data!")
     
-    def filter_data(self, param_name:str, value:float) -> None:
+    def remove_data(self, param_name:str, value:float) -> None:
         """
         Removes data points with specific parameter values
         
@@ -109,21 +107,6 @@ class Controller:
         parameter = self.__get_param__(param_name, mappers, **kwargs)
         self.output_exp_dict[param_name] = parameter
     
-    def set_surrogate(self, surrogate_name:str, **kwargs) -> None:
-        """
-        Defines the surrogate model to be used
-        
-        Parameters:
-        * `surrogate_name`: The name of the surrogate model
-        """
-        input_size = len(self.input_exp_dict.keys())
-        output_size = len(self.output_exp_dict.keys())
-        if input_size == 0:
-            raise ValueError("There are no inputs defined!")
-        if output_size == 0:
-            raise ValueError("There are no outputs defined!")
-        self.surrogate = get_surrogate(surrogate_name, input_size, output_size, self.output_path, **kwargs)
-    
     def __get_data__(self, indexes:list, param_dict:dict, map:bool=True) -> list:
         """
         Gets the list of data points
@@ -165,40 +148,84 @@ class Controller:
         self.valid_input += self.__get_data__(random_indexes, self.input_exp_dict)
         self.valid_output += self.__get_data__(random_indexes, self.output_exp_dict)
         
-    def train_surrogate(self, **kwargs) -> None:
+    def train_surrogate(self, epochs:int, batch_size:int, verbose:bool=False) -> None:
         """
         Trains the model
-        """
-        self.surrogate.set_train_data(self.train_input, self.train_output)
-        self.surrogate.set_valid_data(self.valid_input, self.valid_output)
-        self.surrogate.train(**kwargs)
-
-    def __unmap_output__(self, output_grid:list) -> None:
-        """
-        Unmaps the outputs
         
         Parameters:
-        * `output_grid`: The mapped outputs
+        * `epochs`:     The number of epochs
+        * `batch_size`: The size of each batch
+        * `loss_path`:  The path to output the loss plot
+        * `verbose`:    Whether to display training updates or not
         """
-        unmapped_output_grid = []
-        output_grid = transpose(output_grid)
-        output_key_list = list(self.output_exp_dict.keys())
-        for i in range(len(output_grid)):
-            param = self.output_exp_dict[output_key_list[i]]
-            unmapped_output_list = param.unmap_values(output_grid[i])
-            unmapped_output_grid.append(unmapped_output_list)
-        unmapped_output_grid = transpose(unmapped_output_grid)
-        return unmapped_output_grid
+        
+        # Get input and output sizes
+        input_size = len(self.input_exp_dict.keys())
+        output_size = len(self.output_exp_dict.keys())
+        if input_size == 0:
+            raise ValueError("There are no inputs defined!")
+        if output_size == 0:
+            raise ValueError("There are no outputs defined!")
+        
+        # Initialise surrogate model and start training
+        self.surrogate = Neural(input_size, output_size)
+        self.surrogate.train(self.train_input, self.train_output,
+                             self.valid_input, self.valid_output,
+                             epochs, batch_size, verbose)
+    
+    def plot_loss_history(self, loss_path:str) -> None:
+        """
+        Plots the loss history
+        
+        Parameters:
+        * `loss_path`:  The path to output the loss plot
+        """
+        self.surrogate.plot_loss_history(loss_path)
 
-    def validate_surrogate(self, **kwargs) -> None:
+    def save(self, model_path:str) -> None:
         """
-        Validates the model
+        Saves the surrogate model
+        
+        Parameters:
+        * `model_path`: The path to the surrogate model (excluding extension)
         """
+        self.surrogate.save(model_path)
+
+    def __unmap_params__(self, param_grid:list, param_dict:dict) -> None:
+        """
+        Unmaps the parameters (i.e., inputs/outputs)
+        
+        Parameters:
+        * `param_grid`: The mapped values as a list of lists
+        * `param_dict`: The dictionary of parameters
+        """
+        unmapped_param_grid = []
+        param_grid = transpose(param_grid)
+        key_list = list(param_dict.keys())
+        for i in range(len(param_grid)):
+            param = param_dict[key_list[i]]
+            unmapped_param_list = param.unmap_values(param_grid[i])
+            unmapped_param_grid.append(unmapped_param_list)
+        unmapped_param_grid = transpose(unmapped_param_grid)
+        return unmapped_param_grid
+
+    def print_validation(self, use_log:bool=False, print_table:bool=False) -> None:
+        """
+        Prints a summary of the validation data
+        
+        Parameters:
+        * `use_log`:     Whether to use log when checking the relative error
+        * `print_table`: Whether to print out the table
+        """
+        
+        # Initialise function to account for the use_log boolean
+        transform = lambda x : math.log10(x) if use_log else x
+        use_log_str = "logged " if use_log else ""
 
         # Get the outputs
-        prd_output = self.surrogate.predict(**kwargs)
-        prd_output = transpose(self.__unmap_output__(prd_output))
-        valid_output = transpose(self.__unmap_output__(self.valid_output))
+        prd_output = self.surrogate.predict(self.valid_input)
+        prd_output = transpose(self.__unmap_params__(prd_output, self.output_exp_dict))
+        valid_output = transpose(self.__unmap_params__(self.valid_output, self.output_exp_dict))
         
         # Assess the results
         for i in range(len(prd_output)):
@@ -209,14 +236,91 @@ class Controller:
             for j in range(len(self.valid_output)):
                 
                 # Calculate error
-                exp_value = valid_output[i][j]
-                prd_value = prd_output[i][j]
-                error = round(100 * abs(exp_value - prd_value) / exp_value, 2)
+                exp_value = transform(valid_output[i][j])
+                prd_value = transform(prd_output[i][j])
+                error = round(100 * abs(exp_value - prd_value) / abs(exp_value), 2)
                 error_list.append(error)
                 summary_grid.append([j+1, "{:0.3}".format(exp_value), "{:0.3}".format(prd_value), f"{error}%"])
             
             # Print table and average error
-            print(tabulate(summary_grid, headers="firstrow", tablefmt="grid"))
+            if print_table:
+                print(tabulate(summary_grid, headers="firstrow", tablefmt="grid"))
             avg_error = round(np.average(error_list), 2)
             header = list(self.output_exp_dict.keys())[i]
-            print(f"Average error for {header} = {avg_error}%")
+            print(f"Average {use_log_str}error for {header} = {avg_error}%")
+
+    def plot_validation(self, use_log:bool=False, plot_path:str="prd_plot") -> None:
+        """
+        Creates plots of the validation predictions
+        
+        Parameters:
+        * `use_log`:    Whether to use log when plotting the values
+        * `plot_path`:  The path name of the plot (without the extension)
+        """
+        
+        # Get the outputs
+        prd_output = self.surrogate.predict(self.valid_input)
+        prd_output = transpose(self.__unmap_params__(prd_output, self.output_exp_dict))
+        valid_output = transpose(self.__unmap_params__(self.valid_output, self.output_exp_dict))
+        
+        # Convert outputs to dictionaries
+        output_headers = list(self.output_exp_dict.keys())
+        valid_output_dict = {key: value for key, value in zip(output_headers, valid_output)}
+        prd_output_dict = {key: value for key, value in zip(output_headers, prd_output)}
+        
+        # Create plots
+        for header in output_headers:
+            
+            # Get data points
+            valid_list = valid_output_dict[header]
+            prd_list   = prd_output_dict[header]
+            line_list  = [min(valid_list + prd_list), max(valid_list + prd_list)]
+            
+            # Scale if desired
+            if use_log:
+                plt.xscale("log")
+                plt.yscale("log")
+            
+            # Plot the values with line
+            plt.plot(line_list, line_list, linestyle='--', c="red")
+            plt.scatter(valid_list, prd_list, c="grey")
+            
+            # Format, save, and clear plot
+            plt.title(header)
+            plt.xlabel("validation")
+            plt.ylabel("prediction")
+            plt.gca().set_aspect("equal")
+            plt.savefig(f"{plot_path}_{header}")
+            plt.clf()
+
+    def export_validation(self, export_path:str="prd_data") -> None:
+        """
+        Exports the validation predictions to a CSV file
+        
+        Parameters:
+        * `export_path`: The path to the export file (without the extension)
+        """
+        
+        # Unmap inputs and convert to dictionaries
+        input_headers = list(self.input_exp_dict.keys())
+        valid_input = transpose(self.__unmap_params__(self.valid_input, self.input_exp_dict))
+        valid_input_dict = {key: value for key, value in zip(input_headers, valid_input)}
+        
+        # Get the outputs
+        prd_output = self.surrogate.predict(self.valid_input)
+        prd_output = transpose(self.__unmap_params__(prd_output, self.output_exp_dict))
+        valid_output = transpose(self.__unmap_params__(self.valid_output, self.output_exp_dict))
+        
+        # Convert outputs to dictionaries
+        output_headers = list(self.output_exp_dict.keys())
+        valid_output_dict = {f"valid_{key}": value for key, value in zip(output_headers, valid_output)}
+        prd_output_dict = {f"prd_{key}": value for key, value in zip(output_headers, prd_output)}
+        
+        # Prepare the export dictionary
+        export_dict = deepcopy(valid_input_dict)
+        export_dict.update(valid_output_dict)
+        export_dict.update(prd_output_dict)
+        
+        # Write dictionary to CSV path
+        dict_to_csv(export_dict, f"{export_path}.csv")
+        

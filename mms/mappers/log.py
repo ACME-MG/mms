@@ -18,8 +18,8 @@ class Mapper(__Mapper__):
 
     # Logarithmically maps a value
     def map(self, value:float) -> float:
-        if value < 0:
-            return 0
+        if value <= 0:
+            return -10
         return math.log(value) / math.log(self.base)
 
     # Logarithmically unmaps a value
