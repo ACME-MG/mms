@@ -1,6 +1,6 @@
 """
- Title:         Material Modelling Surrogate API
- Description:   API for calibrating creep models
+ Title:         Material Modelling Surrogate Interface
+ Description:   Interface for calibrating creep models
  Author:        Janzen Choi
 
 """
@@ -9,8 +9,8 @@
 import os, re, time
 from mms.interface.controller import Controller
 
-# API Class
-class API:
+# Interface Class
+class Interface:
 
     def __init__(self, title:str="", input_path:str="./data", output_path:str="./results", output_here:bool=False):
         """

@@ -1,6 +1,6 @@
 """
  Title:         Material Modelling Surrogate Controller
- Description:   Connects the API to the rest of the modules
+ Description:   Connects the Interface to the rest of the modules
  Author:        Janzen Choi
 
 """
