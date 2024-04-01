@@ -7,7 +7,7 @@
 
 # Libraries
 import random
-from mms.interface.converter import csv_to_dict
+from mms.io.converter import csv_to_dict
 
 # Reader class
 class Reader:

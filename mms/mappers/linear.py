@@ -37,3 +37,12 @@ class Mapper(__Mapper__):
             return value
         factor = (self.out_u_bound - self.out_l_bound) / (self.in_u_bound - self.in_l_bound)
         return (value - self.out_l_bound) / factor + self.in_l_bound
+
+    # Returns a dictionary of information about the mapping
+    def get_info(self) -> dict:
+        return {
+            "in_l_bound":  self.in_l_bound,
+            "in_u_bound":  self.in_u_bound,
+            "out_l_bound": self.out_l_bound,
+            "out_u_bound": self.out_u_bound,
+        }

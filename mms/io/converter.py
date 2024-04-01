@@ -91,8 +91,6 @@ def csv_to_dict(csv_path:str, delimeter:str=",") -> dict:
     for header in headers:
         if len(csv_dict[header]) == 1:
             csv_dict[header] = csv_dict[header][0]
-        else:
-            csv_dict[header] = csv_dict[header]
     
     # Return
     return csv_dict

@@ -7,7 +7,7 @@
 
 # Libraries
 import os, re, time
-from mms.interface.controller import Controller
+from mms.io.controller import Controller
 
 # Interface Class
 class Interface:
@@ -69,7 +69,16 @@ class Interface:
         """
         time_str = time.strftime("%A, %D, %H:%M:%S", time.localtime())
         duration = round(time.time() - self.__start_time__)
-        self.__print__(f"\n  Finished on {time_str} in {duration}s\n", add_index=False)
+        duration_h = duration // 3600
+        duration_m = (duration - duration_h * 3600) // 60
+        duration_s = duration - duration_h * 3600 - duration_m * 60
+        duration_str_list = [
+            f"{duration_h} hours" if duration_h > 0 else "",
+            f"{duration_m} mins" if duration_m > 0 else "",
+            f"{duration_s} seconds" if duration_s > 0 else ""
+        ]
+        duration_str = ", ".join([d for d in duration_str_list if d != ""])
+        self.__print__(f"\n  Finished on {time_str} in {duration_str}\n", add_index=False)
 
     def read_data(self, data_file:str) -> None:
         """
@@ -167,9 +176,20 @@ class Interface:
         Parameters:
         * `model_file`: The file to save the surrogate model
         """
-        self.__print__(f"Saving the surrogate model to {model_file}")
+        self.__print__(f"Saving the surrogate model to '{model_file}'")
         model_path = self.__get_output__(model_file)
-        self.__controller__.plot_loss_history(model_path)
+        self.__controller__.save(model_path)
+
+    def export_maps(self, map_file:str="maps") -> None:
+        """
+        Exports information about the maps
+
+        Parameters:
+        * `map_file`: The file to save the mapping information
+        """
+        self.__print__(f"Saving the mapping information to '{map_file}'")
+        map_path = self.__get_output__(map_file)
+        self.__controller__.export_maps(map_path)
 
     def print_validation(self, use_log:bool=False, print_table:bool=False) -> None:
         """

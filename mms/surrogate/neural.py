@@ -70,13 +70,13 @@ class Neural:
         
         # Initialise everything before training
         dataset = CustomDataset(train_input_tensor, train_output_tensor)
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         
         # Start training
         for epoch in range(epochs):
             
             # Completes training
-            for batch_inputs, batch_outputs in dataloader:
+            for batch_inputs, batch_outputs in data_loader:
                 self.optimiser.zero_grad()
                 outputs = self.model(batch_inputs)
                 loss = self.loss_function(outputs, batch_outputs)
@@ -146,9 +146,7 @@ class Neural:
         Parameters:
         * `model_path`: The path to the surrogate model (excluding extension)
         """
-        neuron_sizes = [self.input_size] + HIDDEN_LAYER_SIZES + [self.output_size]
-        state_dict   = self.model.state_dict()
-        torch.save({"nneurons": neuron_sizes, "state_dict": state_dict}, f"{model_path}.pt")
+        torch.save(self.model, f"{model_path}.pt")
 
 # Custom PyTorch model
 class CustomModel(torch.nn.Module):

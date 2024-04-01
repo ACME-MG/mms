@@ -62,6 +62,12 @@ class __Mapper__:
         """
         raise NotImplementedError
 
+    def get_info(self) -> dict:
+        """
+        Returns information about how the mapping is being done
+        """
+        raise NotImplementedError
+
 def get_mapper(mapper_name:str, value_list:list, **kwargs) -> __Mapper__:
     """
     Creates and returns a mapper

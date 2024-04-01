@@ -36,10 +36,11 @@ itf.add_training_data(338)
 itf.add_validation_data(37)
 
 itf.train(epochs=10000, batch_size=32, verbose=True)
-itf.plot_loss_history()
 
+# itf.plot_loss_history()
 itf.print_validation(use_log=True, print_table=False)
-itf.plot_validation(use_log=True)
+# itf.plot_validation(use_log=True)
 itf.export_validation()
 
-itf.save()
+itf.save("vshai")
+itf.export_maps("vshai")

@@ -10,7 +10,7 @@ import math, numpy as np, random
 import matplotlib.pyplot as plt
 from tabulate import tabulate
 from copy import deepcopy
-from mms.interface.converter import csv_to_dict, transpose, dict_to_csv
+from mms.io.converter import csv_to_dict, transpose, dict_to_csv
 from mms.surrogate.neural import Neural
 from mms.surrogate.parameter import Parameter
 
@@ -190,6 +190,42 @@ class Controller:
         * `model_path`: The path to the surrogate model (excluding extension)
         """
         self.surrogate.save(model_path)
+
+    def export_maps(self, map_path:str) -> None:
+        """
+        Exports information about the maps
+
+        Parameters:
+        * `map_path`: The path to save the mapping information
+        """
+
+        # Get parameter information
+        param_names = list(self.input_exp_dict.keys()) + list(self.output_exp_dict.keys())
+        param_list = list(self.input_exp_dict.values()) + list(self.output_exp_dict.values())
+
+        # Get information about mappers
+        combined_mapper_dict_list = []
+        for param in param_list:
+            combined_mapper_dict = {}
+            for mapper in param.get_mappers():
+                mapper_dict = mapper.get_info()
+                combined_mapper_dict.update(mapper_dict)
+            combined_mapper_dict_list.append(combined_mapper_dict)
+
+        # Combine mapper information
+        mapper_summary = {"param_name": param_names}
+        mapper_keys = [list(combined_mapper_dict.keys()) for combined_mapper_dict in combined_mapper_dict_list]
+        mapper_keys = list(set([item for sublist in mapper_keys for item in sublist]))
+        for mapper_key in mapper_keys:
+            mapper_summary[mapper_key] = []
+            for combined_mapper_dict in combined_mapper_dict_list:
+                if mapper_key in combined_mapper_dict.keys():
+                    mapper_summary[mapper_key].append(combined_mapper_dict[mapper_key])
+                else:
+                    mapper_summary[mapper_key].append("")
+
+        # Write to CSV file
+        dict_to_csv(mapper_summary, f"{map_path}.csv")
 
     def __unmap_params__(self, param_grid:list, param_dict:dict) -> None:
         """

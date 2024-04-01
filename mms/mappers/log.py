@@ -25,3 +25,7 @@ class Mapper(__Mapper__):
     # Logarithmically unmaps a value
     def unmap(self, value:float) -> float:
         return math.pow(self.base, value)
+    
+    # Returns a dictionary of information about the mapping
+    def get_info(self) -> dict:
+        return {"base": self.base}
