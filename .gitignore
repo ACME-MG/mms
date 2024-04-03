@@ -1,6 +1,3 @@
-mms/__pycache__
-mms/itf/__pycache__
-mms/surrogate/__pycache__
-mms/mappers/__pycache__
-mms/scripts/nohup.out
-mms/scripts/plot
+**/nohup.out
+**/__pycache__/
+**/results/
