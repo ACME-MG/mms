@@ -66,24 +66,30 @@ def extract_data(data_dict:dict, sim_prefix:str, prd_prefix:str) -> tuple:
             prd_list += data_dict[field]
     return sim_list, prd_list
 
-# Get simerimental and predicted data
-data_dict = csv_to_dict(FILE_PATH)
-# data_info = r"$\epsilon$ (mm/mm)"
-# limits = (0, 3500)
-# sim_list, prd_list = extract_data(data_dict, "valid_y", "prd_y")
-# colour = "green"
-data_info = r"$t_f$ (h)"
-limits = (0, 0.7)
-sim_list, prd_list = extract_data(data_dict, "valid_x", "prd_x")
-colour = "red"
-
 # Prepare and plot
 fig, ax = plt.subplots()
 ax.set_aspect("equal", "box")
 
+# Get simerimental and predicted data
+data_dict = csv_to_dict(FILE_PATH)
+# data_info = r"$\epsilon$ (mm/mm)"
+# limits = (0, 0.25)
+# sim_list, prd_list = extract_data(data_dict, "valid_y", "prd_y")
+# colour = "green"
+data_info = r"$t_f$ (h)"
+limits = (0, 12000)
+sim_list, prd_list = extract_data(data_dict, "valid_x", "prd_x")
+sim_list = [t/3600 for t in sim_list]
+prd_list = [t/3600 for t in prd_list]
+colour = "red"
+ax.ticklabel_format(axis="x", style="sci", scilimits=(3,3))
+ax.ticklabel_format(axis="y", style="sci", scilimits=(3,3))
+ax.xaxis.major.formatter._useMathText = True
+ax.yaxis.major.formatter._useMathText = True
+
 # Set labels and plot line
-plt.xlabel(f"Predicted {data_info}", fontsize=LABEL_FONTSIZE)
-plt.ylabel(f"Simulated {data_info}", fontsize=LABEL_FONTSIZE)
+plt.xlabel(f"Surrogate model {data_info}", fontsize=LABEL_FONTSIZE)
+plt.ylabel(f"CPFE model {data_info}", fontsize=LABEL_FONTSIZE)
 plt.plot(limits, limits, linestyle="--", color="black", zorder=1)
 
 # Plot data

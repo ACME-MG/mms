@@ -15,12 +15,12 @@ import matplotlib.pyplot as plt
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 # Constants
-HIDDEN_LAYER_SIZES  = [64, 32, 16, 8]
-START_LEARNING_RATE = 1E-3
-MIN_LEARNING_RATE   = 1E-6
+HIDDEN_LAYER_SIZES  = [256, 128, 64, 32]
+START_LEARNING_RATE = 1E-2 # 1E-3
+MIN_LEARNING_RATE   = 1E-7 # 1E-6
 WEIGHT_DECAY        = 1E-7
-REDUCTION_FACTOR    = 0.1
-PATIENCE_AMOUNT     = 200
+REDUCTION_FACTOR    = 0.5
+PATIENCE_AMOUNT     = 100
 
 # Neural class
 class Neural:
@@ -117,8 +117,9 @@ class Neural:
         * `loss_path`:   The path to output the loss
         """
         plt.title("Log_10 Loss vs Epochs")
-        plt.xlabel("epochs")
-        plt.ylabel("MSE Loss")
+        plt.figure(figsize=(6, 6))
+        plt.xlabel("Number of epochs", fontsize=15)
+        plt.ylabel("MSE Loss", fontsize=15)
         plt.plot(list(range(len(self.results["train_loss"]))), self.results["train_loss"], c="blue", label="training")
         plt.plot(list(range(len(self.results["valid_loss"]))), self.results["valid_loss"], c="red", label="validation")
         plt.yscale("log")

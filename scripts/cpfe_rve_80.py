@@ -1,0 +1,51 @@
+import sys; sys.path += [".."]
+from mms.interface import Interface
+
+itf = Interface("cpfe_rve_80")
+itf.read_data("cpfe_rve_80.csv")
+
+itf.add_input("tau_s",   ["log", "linear"])
+itf.add_input("b",       ["log", "linear"])
+itf.add_input("tau_0",   ["log", "linear"])
+itf.add_input("gamma_0", ["log", "linear"])
+itf.add_input("n",       ["log", "linear"])
+
+itf.add_output("x_end", ["log", "linear"])
+itf.add_output("y_1", ["log", "linear"])
+itf.add_output("y_2", ["log", "linear"])
+itf.add_output("y_3", ["log", "linear"])
+itf.add_output("y_4", ["log", "linear"])
+itf.add_output("y_5", ["log", "linear"])
+itf.add_output("y_6", ["log", "linear"])
+itf.add_output("y_7", ["log", "linear"])
+itf.add_output("y_8", ["log", "linear"])
+itf.add_output("y_9", ["log", "linear"])
+itf.add_output("y_10", ["log", "linear"])
+itf.add_output("y_11", ["log", "linear"])
+itf.add_output("y_12", ["log", "linear"])
+itf.add_output("y_13", ["log", "linear"])
+itf.add_output("y_14", ["log", "linear"])
+itf.add_output("y_15", ["log", "linear"])
+itf.add_output("y_16", ["log", "linear"])
+itf.add_output("y_17", ["log", "linear"])
+itf.add_output("y_18", ["log", "linear"])
+itf.add_output("y_19", ["log", "linear"])
+itf.add_output("y_20", ["log", "linear"])
+itf.add_output("y_21", ["log", "linear"])
+itf.add_output("y_22", ["log", "linear"])
+itf.add_output("y_23", ["log", "linear"])
+itf.add_output("y_24", ["log", "linear"])
+itf.add_output("y_25", ["log", "linear"])
+
+itf.add_training_data(450)
+itf.add_validation_data(50)
+
+itf.train(epochs=10000, batch_size=32, verbose=True)
+
+itf.plot_loss_history()
+itf.print_validation(use_log=True, print_table=False)
+itf.plot_validation(use_log=True)
+itf.export_validation()
+
+itf.save("cpfe_rve_80")
+itf.export_maps("cpfe_rve_80")

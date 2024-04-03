@@ -318,14 +318,14 @@ class Controller:
                 plt.yscale("log")
             
             # Plot the values with line
+            plt.figure(figsize=(5,5))
             plt.plot(line_list, line_list, linestyle='--', c="red")
             plt.scatter(valid_list, prd_list, c="grey")
             
             # Format, save, and clear plot
             plt.title(header)
-            plt.xlabel("validation")
-            plt.ylabel("prediction")
-            plt.gca().set_aspect("equal")
+            plt.xlabel("Validation", fontsize=15)
+            plt.ylabel("Prediction", fontsize=15)
             plt.savefig(f"{plot_path}_{header}")
             plt.clf()
 
