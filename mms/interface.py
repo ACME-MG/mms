@@ -126,25 +126,29 @@ class Interface:
         self.__print__(f"Adding output {param_name} {mapper_str}")
         self.__controller__.add_output(param_name, mappers, **kwargs)
     
-    def add_training_data(self, num_data:int) -> None:
+    def add_training_data(self, ratio:float) -> None:
         """
         Adds data for training
         
         Parameters:
-        * `num_data`: The number of training data
+        * `ratio`: The ratio of the training data (0-1)
         """
-        self.__print__(f"Adding {num_data} data points to the training dataset")
-        self.__controller__.add_training_data(num_data)
+        self.__print__(f"Adding {round(ratio*100)}% of the data points to the training dataset")
+        self.__controller__.add_training_data(ratio)
     
-    def add_validation_data(self, num_data:int) -> None:
+    def add_validation_data(self, ratio:float=None) -> None:
         """
         Adds data for validation
         
         Parameters:
-        * `num_data`: The number of validation data
+        * `ratio`: The ratio of the validation data (0-1);
+                   if unspecifies, then it selects the remainder
         """
-        self.__print__(f"Adding {num_data} data points to the validation dataset")
-        self.__controller__.add_validation_data(num_data)
+        if ratio == None:
+            self.__print__(f"Adding the remaining data points to the validation dataset")
+        else:
+            self.__print__(f"Adding {round(ratio*100)}% of the data points to the validation dataset")
+        self.__controller__.add_validation_data(ratio)
     
     def train(self, epochs:int, batch_size:int, verbose:bool=False) -> None:
         """

@@ -126,25 +126,30 @@ class Controller:
         mapped_grid = transpose(mapped_grid)
         return mapped_grid
     
-    def add_training_data(self, num_data:int) -> None:
+    def add_training_data(self, ratio:int) -> None:
         """
         Adds data for training
         
         Parameters:
-        * `num_data`: The number of training data
+        * `ratio`: The ratio of the training data
         """
+        num_data = round(self.__get_num_data__() * ratio)
         random_indexes = random.sample(range(self.__get_num_data__()), num_data)
         self.train_input += self.__get_data__(random_indexes, self.input_exp_dict)
         self.train_output += self.__get_data__(random_indexes, self.output_exp_dict)
     
-    def add_validation_data(self, num_data:int) -> None:
+    def add_validation_data(self, ratio:int=None) -> None:
         """
         Adds data for validation
         
         Parameters:
-        * `num_data`: The number of validation data
+        * `ratio`: The ratio of the validation data
         """
-        random_indexes = random.sample(range(self.__get_num_data__()), num_data)
+        if ratio != None:
+            num_data = round(self.__get_num_data__() * ratio)
+            random_indexes = random.sample(range(self.__get_num_data__()), num_data)
+        else:
+            random_indexes = list(range(self.__get_num_data__()))
         self.valid_input += self.__get_data__(random_indexes, self.input_exp_dict)
         self.valid_output += self.__get_data__(random_indexes, self.output_exp_dict)
         
@@ -269,12 +274,15 @@ class Controller:
             # Initialise error storage
             error_list = []
             summary_grid = [["index", "exp", "prd", "RE"]]
+            average_exp = np.average([abs(transform(valid_output[i][j])) for j in range(len(self.valid_output))])
+            
+            # Iterate through predictions
             for j in range(len(self.valid_output)):
                 
                 # Calculate error
                 exp_value = transform(valid_output[i][j])
                 prd_value = transform(prd_output[i][j])
-                error = round(100 * abs(exp_value - prd_value) / abs(exp_value), 2)
+                error = round(100 * abs(exp_value - prd_value) / average_exp, 2)
                 error_list.append(error)
                 summary_grid.append([j+1, "{:0.3}".format(exp_value), "{:0.3}".format(prd_value), f"{error}%"])
             

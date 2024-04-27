@@ -73,6 +73,7 @@ class Neural:
         data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         
         # Start training
+        print()
         for epoch in range(epochs):
             
             # Completes training
