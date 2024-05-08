@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 from tabulate import tabulate
 from copy import deepcopy
 from mms.io.converter import csv_to_dict, transpose, dict_to_csv
-from mms.surrogate.neural import Neural
-from mms.surrogate.parameter import Parameter
+from mms.surrogates.__surrogate__ import create_surrogate
+from mms.io.parameter import Parameter
 
 # Controller class
 class Controller:
@@ -64,27 +64,6 @@ class Controller:
         # Replace dictionary
         self.raw_exp_dict = new_raw_exp_dict
     
-    def __get_num_data__(self) -> int:
-        """
-        Gets the number of data (from the input dict)
-        """
-        return self.input_exp_dict[list(self.input_exp_dict.keys())[0]].get_num_data()
-    
-    def __get_param__(self, param_name:str, mappers:list=None, **kwargs) -> Parameter:
-        """
-        Adds a parameter as an input or output, internally
-        
-        Parameters:
-        * `param_name`: The name of the output parameter
-        * `mappers`: The ordered list of how the parameter will be mapped
-        """
-        if not param_name in self.raw_exp_dict.keys():
-            raise ValueError(f"The parameter {param_name} does not exist in the CSV file!")
-        value_list = self.raw_exp_dict[param_name]
-        mappers = [] if mappers == None else mappers
-        parameter = Parameter(param_name, value_list, mappers, **kwargs)
-        return parameter
-    
     def add_input(self, param_name:str, mappers:list=None, **kwargs) -> None:
         """
         Adds a parameter as an input
@@ -106,25 +85,6 @@ class Controller:
         """
         parameter = self.__get_param__(param_name, mappers, **kwargs)
         self.output_exp_dict[param_name] = parameter
-    
-    def __get_data__(self, indexes:list, param_dict:dict, map:bool=True) -> list:
-        """
-        Gets the list of data points
-        
-        Parameters:
-        * `indexes`:    The indexes of the data points
-        * `param_dict`: Dictionary of parameters (i.e., input / output)
-        * `map`:        Whether or not to map the data
-        """
-        mapped_grid = []
-        for param_name in param_dict.keys():
-            param = param_dict[param_name]
-            value_list = param.get_and_remove_value_list(indexes)
-            if map:
-                value_list = param.map_values(value_list)
-            mapped_grid.append(value_list)
-        mapped_grid = transpose(mapped_grid)
-        return mapped_grid
     
     def add_training_data(self, ratio:int) -> None:
         """
@@ -152,31 +112,38 @@ class Controller:
             random_indexes = list(range(self.__get_num_data__()))
         self.valid_input += self.__get_data__(random_indexes, self.input_exp_dict)
         self.valid_output += self.__get_data__(random_indexes, self.output_exp_dict)
-        
-    def train_surrogate(self, epochs:int, batch_size:int, verbose:bool=False) -> None:
+    
+    def get_validation_data(self) -> None:
         """
-        Trains the model
-        
+        Gets validation data from the training data;
+        requires the surrogate model to define 'get_valid_indexes'
+        """
+        valid_indexes = self.surrogate.get_valid_indexes()
+        self.valid_input = [self.train_input[i] for i in range(len(self.train_input)) if i in valid_indexes]
+        self.valid_output = [self.train_output[i] for i in range(len(self.train_output)) if i in valid_indexes]
+
+    def define_surrogate(self, surrogate_name:str, **kwargs) -> None:
+        """
+        Defines the surrogate
+
         Parameters:
-        * `epochs`:     The number of epochs
-        * `batch_size`: The size of each batch
-        * `loss_path`:  The path to output the loss plot
-        * `verbose`:    Whether to display training updates or not
+        * `surrogate_name`: The name of the surrogate
         """
-        
-        # Get input and output sizes
         input_size = len(self.input_exp_dict.keys())
         output_size = len(self.output_exp_dict.keys())
         if input_size == 0:
             raise ValueError("There are no inputs defined!")
         if output_size == 0:
             raise ValueError("There are no outputs defined!")
-        
-        # Initialise surrogate model and start training
-        self.surrogate = Neural(input_size, output_size)
+        self.surrogate = create_surrogate(surrogate_name, input_size, output_size, **kwargs)
+
+    def train_surrogate(self, **kwargs) -> None:
+        """
+        Trains the surrogate model
+        """
         self.surrogate.train(self.train_input, self.train_output,
                              self.valid_input, self.valid_output,
-                             epochs, batch_size, verbose)
+                             **kwargs)
     
     def plot_loss_history(self, loss_path:str) -> None:
         """
@@ -232,24 +199,6 @@ class Controller:
         # Write to CSV file
         dict_to_csv(mapper_summary, f"{map_path}.csv")
 
-    def __unmap_params__(self, param_grid:list, param_dict:dict) -> None:
-        """
-        Unmaps the parameters (i.e., inputs/outputs)
-        
-        Parameters:
-        * `param_grid`: The mapped values as a list of lists
-        * `param_dict`: The dictionary of parameters
-        """
-        unmapped_param_grid = []
-        param_grid = transpose(param_grid)
-        key_list = list(param_dict.keys())
-        for i in range(len(param_grid)):
-            param = param_dict[key_list[i]]
-            unmapped_param_list = param.unmap_values(param_grid[i])
-            unmapped_param_grid.append(unmapped_param_list)
-        unmapped_param_grid = transpose(unmapped_param_grid)
-        return unmapped_param_grid
-
     def print_validation(self, use_log:bool=False, print_table:bool=False) -> None:
         """
         Prints a summary of the validation data
@@ -268,7 +217,8 @@ class Controller:
         prd_output = transpose(self.__unmap_params__(prd_output, self.output_exp_dict))
         valid_output = transpose(self.__unmap_params__(self.valid_output, self.output_exp_dict))
         
-        # Assess the results
+        # Assess and print out the results
+        print()
         for i in range(len(prd_output)):
             
             # Initialise error storage
@@ -292,6 +242,7 @@ class Controller:
             avg_error = round(np.average(error_list), 2)
             header = list(self.output_exp_dict.keys())[i]
             print(f"Average {use_log_str}error for {header} = {avg_error}%")
+        print()
 
     def plot_validation(self, use_log:bool=False, plot_path:str="prd_plot") -> None:
         """
@@ -368,3 +319,60 @@ class Controller:
         # Write dictionary to CSV path
         dict_to_csv(export_dict, f"{export_path}.csv")
         
+    def __get_num_data__(self) -> int:
+        """
+        Gets the number of data (from the input dict)
+        """
+        return self.input_exp_dict[list(self.input_exp_dict.keys())[0]].get_num_data()
+    
+    def __get_param__(self, param_name:str, mappers:list=None, **kwargs) -> Parameter:
+        """
+        Adds a parameter as an input or output, internally
+        
+        Parameters:
+        * `param_name`: The name of the output parameter
+        * `mappers`: The ordered list of how the parameter will be mapped
+        """
+        if not param_name in self.raw_exp_dict.keys():
+            raise ValueError(f"The parameter {param_name} does not exist in the CSV file!")
+        value_list = self.raw_exp_dict[param_name]
+        mappers = [] if mappers == None else mappers
+        parameter = Parameter(param_name, value_list, mappers, **kwargs)
+        return parameter
+    
+    def __get_data__(self, indexes:list, param_dict:dict, map:bool=True) -> list:
+        """
+        Gets the list of data points
+        
+        Parameters:
+        * `indexes`:    The indexes of the data points
+        * `param_dict`: Dictionary of parameters (i.e., input / output)
+        * `map`:        Whether or not to map the data
+        """
+        mapped_grid = []
+        for param_name in param_dict.keys():
+            param = param_dict[param_name]
+            value_list = param.get_and_remove_value_list(indexes)
+            if map:
+                value_list = param.map_values(value_list)
+            mapped_grid.append(value_list)
+        mapped_grid = transpose(mapped_grid)
+        return mapped_grid
+    
+    def __unmap_params__(self, param_grid:list, param_dict:dict) -> None:
+        """
+        Unmaps the parameters (i.e., inputs/outputs)
+        
+        Parameters:
+        * `param_grid`: The mapped values as a list of lists
+        * `param_dict`: The dictionary of parameters
+        """
+        unmapped_param_grid = []
+        param_grid = transpose(param_grid)
+        key_list = list(param_dict.keys())
+        for i in range(len(param_grid)):
+            param = param_dict[key_list[i]]
+            unmapped_param_list = param.unmap_values(param_grid[i])
+            unmapped_param_grid.append(unmapped_param_list)
+        unmapped_param_grid = transpose(unmapped_param_grid)
+        return unmapped_param_grid

@@ -126,7 +126,7 @@ class Interface:
         self.__print__(f"Adding output {param_name} {mapper_str}")
         self.__controller__.add_output(param_name, mappers, **kwargs)
     
-    def add_training_data(self, ratio:float) -> None:
+    def add_training_data(self, ratio:float=1.0) -> None:
         """
         Adds data for training
         
@@ -150,17 +150,22 @@ class Interface:
             self.__print__(f"Adding {round(ratio*100)}% of the data points to the validation dataset")
         self.__controller__.add_validation_data(ratio)
     
-    def train(self, epochs:int, batch_size:int, verbose:bool=False) -> None:
+    def define(self, surrogate_name:str, **kwargs) -> None:
+        """
+        Defines the surrogate
+
+        Parameters:
+        * `surrogate_name`: The name of the surrogate
+        """
+        self.__print__(f"Defining the '{surrogate_name}' surroggate model")
+        self.__controller__.define_surrogate(surrogate_name, **kwargs)
+
+    def train(self, **kwargs) -> None:
         """
         Trains the model
-        
-        Parameters:
-        * `epochs`:     The number of epochs
-        * `batch_size`: The size of each batch
-        * `verbose`:    Whether to display training updates or not
         """
-        self.__print__(f"Training the model with a batch size of {batch_size} for {epochs} epochs")
-        self.__controller__.train_surrogate(epochs, batch_size, verbose)
+        self.__print__(f"Training the surrogate model")
+        self.__controller__.train_surrogate(**kwargs)
 
     def plot_loss_history(self, loss_file:str="loss_history") -> None:
         """
@@ -194,6 +199,14 @@ class Interface:
         self.__print__(f"Saving the mapping information to '{map_file}'")
         map_path = self.__get_output__(map_file)
         self.__controller__.export_maps(map_path)
+
+    def get_validation_data(self) -> None:
+        """
+        Uses a subset of training data as validation data;
+        requires the surrogate model to define 'get_valid_indexes'
+        """
+        self.__print__("Getting a subset of training data to use as validation data")
+        self.__controller__.get_validation_data()
 
     def print_validation(self, use_log:bool=False, print_table:bool=False) -> None:
         """

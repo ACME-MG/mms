@@ -1,21 +1,22 @@
 import sys; sys.path += [".."]
 from mms.interface import Interface
 
-itf = Interface(f"phi")
-itf.read_data(f"phi.csv")
+itf = Interface(f"phi_bcc")
+itf.read_data(f"phi_bcc.csv")
 
-for input in ["tau_sat", "b", "tau_0", "gamma_0", "n"]:
+input_list = ["tau_sat", "b", "tau_0", "gamma_0", "n"]
+output_list = [f"g{i+1}_{label}_{pos}" for i in range(5) for label in ["phi_1", "Phi", "phi_2"] for pos in ["start", "end"]]
+for input in input_list:
     itf.add_input(input, ["log", "linear"])
-
-for output in [f"g{i+1}_{label}_{pos}" for i in range(5) for label in ["phi_1", "Phi", "phi_2"] for pos in ["start", "end"]]:
+for output in output_list:
     itf.add_output(output, ["log", "linear"])
 
-itf.add_training_data(0.9)
-itf.add_validation_data()
-
-itf.train(epochs=1000, batch_size=32, verbose=True)
-
+itf.define("kfold", num_splits=5, epochs=1000, batch_size=32, verbose=True)
+itf.add_training_data()
+itf.train()
 itf.plot_loss_history()
+
+itf.get_validation_data()
 itf.print_validation(use_log=True, print_table=False)
 itf.plot_validation(use_log=True)
 itf.export_validation()

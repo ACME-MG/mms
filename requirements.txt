@@ -1,3 +1,4 @@
 tensorflow
 tabulate
 torch
+scikit-learn

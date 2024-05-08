@@ -52,10 +52,10 @@ def main():
     surrogate = Neural(len(input_list), len(output_list))
     
     # Train and plot results
-    surrogate.train(train_inputs, train_outputs, valid_inputs, valid_outputs, epochs=5000, batch_size=32)
-    surrogate.plot_loss_history("loss_plot.png")
-    surrogate.print_validation(valid_inputs, valid_outputs, output_list)
-    surrogate.plot_validation(valid_inputs, valid_outputs, output_list, "prd_plot.png")
+    surrogates.train(train_inputs, train_outputs, valid_inputs, valid_outputs, epochs=5000, batch_size=32)
+    surrogates.plot_loss_history("loss_plot.png")
+    surrogates.print_validation(valid_inputs, valid_outputs, output_list)
+    surrogates.plot_validation(valid_inputs, valid_outputs, output_list, "prd_plot.png")
 
 # Parameter class
 class Parameter:
