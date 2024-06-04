@@ -97,10 +97,8 @@ class Surrogate(__Surrogate__):
             self.add_valid_loss(valid_loss.item())
     
             # Print update if desired
-            if self.verbose:
-                print("Epoch={}, \tTrainLoss={:0.3}, \tValidLoss={:0.3}".format(
-                    epoch+1, train_loss.item(), valid_loss.item()
-                ))
+            if self.verbose and epoch % ((self.epochs)//10) == 0:
+                print("Epoch={}, \tTrainLoss={:0.3}, \tValidLoss={:0.3}".format(epoch, train_loss.item(), valid_loss.item()))
     
             # Updates the state
             self.scheduler.step(valid_loss)

@@ -252,41 +252,45 @@ class Controller:
         * `use_log`:    Whether to use log when plotting the values
         * `plot_path`:  The path name of the plot (without the extension)
         """
+
+        # Get the training and validation data
+        train_sim_list, train_prd_list = self.__get_predictions__(self.train_input, self.train_output)
+        valid_sim_list, valid_prd_list = self.__get_predictions__(self.valid_input, self.valid_output)
+        all_data = train_sim_list + train_prd_list + valid_sim_list + valid_prd_list
+
+        # Plot the training and validation data
+        plt.figure(figsize=(5,5))
+        plt.scatter(train_sim_list, train_prd_list, c="green")
+        plt.scatter(valid_sim_list, valid_prd_list, c="red")
         
-        # Get the outputs
-        prd_output = self.surrogate.predict(self.valid_input)
-        prd_output = transpose(self.__unmap_params__(prd_output, self.output_exp_dict))
-        valid_output = transpose(self.__unmap_params__(self.valid_output, self.output_exp_dict))
+        # Plot the line
+        min_limit = min(all_data)
+        max_limit = max(all_data)
+        line_list = [min_limit, max_limit]
+        plt.plot(line_list, line_list, linestyle="--", c="black")
+
+        # Add 'conservative' region
+        triangle_vertices = np.array([[min_limit, min_limit], [max_limit, min_limit], [max_limit, max_limit]])
+        plt.gca().fill(triangle_vertices[:, 0], triangle_vertices[:, 1], color="gray", alpha=0.3)
+        plt.text(max_limit-0.48*(max_limit-min_limit), min_limit+0.05*(max_limit-min_limit), "Non-conservative", fontsize=10, color="black")
         
-        # Convert outputs to dictionaries
-        output_headers = list(self.output_exp_dict.keys())
-        valid_output_dict = {key: value for key, value in zip(output_headers, valid_output)}
-        prd_output_dict = {key: value for key, value in zip(output_headers, prd_output)}
+        # Define legend
+        handles = [plt.scatter([], [], color="green", label="Training"), plt.scatter([], [], color="red",   label="Validation")]
+        legend = plt.legend(handles=handles, framealpha=1, edgecolor="black", fancybox=True, facecolor="white", fontsize=12, loc="upper left")
+        plt.gca().add_artist(legend)
+
+        # Format plot
+        if use_log:
+            plt.xscale("log")
+            plt.yscale("log")
+        plt.xlim(min_limit, max_limit)
+        plt.ylim(min_limit, max_limit)
+        plt.xlabel("Validation", fontsize=15)
+        plt.ylabel("Prediction", fontsize=15)
         
-        # Create plots
-        for header in output_headers:
-            
-            # Get data points
-            valid_list = valid_output_dict[header]
-            prd_list   = prd_output_dict[header]
-            line_list  = [min(valid_list + prd_list), max(valid_list + prd_list)]
-            
-            # Scale if desired
-            if use_log:
-                plt.xscale("log")
-                plt.yscale("log")
-            
-            # Plot the values with line
-            plt.figure(figsize=(5,5))
-            plt.plot(line_list, line_list, linestyle='--', c="red")
-            plt.scatter(valid_list, prd_list, c="grey")
-            
-            # Format, save, and clear plot
-            plt.title(header)
-            plt.xlabel("Validation", fontsize=15)
-            plt.ylabel("Prediction", fontsize=15)
-            plt.savefig(f"{plot_path}_{header}")
-            plt.clf()
+        # Save and clear plot
+        plt.savefig(plot_path)
+        plt.clf()
 
     def export_validation(self, export_path:str="prd_data") -> None:
         """
@@ -318,7 +322,36 @@ class Controller:
         
         # Write dictionary to CSV path
         dict_to_csv(export_dict, f"{export_path}.csv")
+
+    def __get_predictions__(self, input_list:list, output_list:list) -> tuple:
+        """
+        Gets the predictions given a list of inputs and outputs
+
+        Parameters:
+        * `input_list`:  List of inputs
+        * `output_list`: List of outputs
+
+        Returns the lists of simulated (training / validation) and predicted (surrogate) data
+        """
+
+        # Get the outputs
+        prd_output = self.surrogate.predict(input_list)
+        prd_output = transpose(self.__unmap_params__(prd_output, self.output_exp_dict))
+        sim_output = transpose(self.__unmap_params__(output_list, self.output_exp_dict))
         
+        # Convert outputs to dictionaries
+        output_headers = list(self.output_exp_dict.keys())
+        sim_output_dict = {key: value for key, value in zip(output_headers, sim_output)}
+        prd_output_dict = {key: value for key, value in zip(output_headers, prd_output)}
+        
+        # Get all points
+        flatten = lambda nested_list : [item for sublist in nested_list for item in sublist]
+        sim_list = flatten([sim_output_dict[header] for header in output_headers])
+        prd_list   = flatten([prd_output_dict[header] for header in output_headers])
+
+        # Returns the data
+        return sim_list, prd_list
+
     def __get_num_data__(self) -> int:
         """
         Gets the number of data (from the input dict)

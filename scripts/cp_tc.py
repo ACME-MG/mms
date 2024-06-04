@@ -1,8 +1,8 @@
 import sys; sys.path += [".."]
 from mms.interface import Interface
 
-itf = Interface("tc_bcc")
-itf.read_data("tc_bcc.csv")
+itf = Interface("617_s1_tc")
+itf.read_data("617_s1_tc.csv")
 
 input_list = ["tau_sat", "b", "tau_0", "gamma_0", "n"]
 output_list = ["x_end"] + [f"y_{i+1}" for i in range(30)]
@@ -18,8 +18,8 @@ itf.plot_loss_history()
 
 itf.get_validation_data()
 itf.print_validation(use_log=True, print_table=False)
-itf.plot_validation(use_log=True)
+itf.plot_validation()
 itf.export_validation()
 
-itf.save("tc")
-itf.export_maps("tc")
+itf.save("617_s1_tc")
+itf.export_maps("617_s1_tc")

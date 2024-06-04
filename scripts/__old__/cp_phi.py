@@ -8,7 +8,7 @@ itf.define("simple", epochs=50, batch_size=32, verbose=True)
 for input in ["tau_sat", "b", "tau_0", "gamma_0", "n"]:
     itf.add_input(input, ["log", "linear"])
 
-for output in [f"g{i+1}_{label}_{pos}" for i in range(5) for label in ["phi_1", "Phi", "phi_2"] for pos in ["start", "end"]]:
+for output in [f"g{i}_{label}_{pos}" for i in range(5) for label in ["phi_1", "Phi", "phi_2"] for pos in ["start", "end"]]:
     itf.add_output(output, ["log", "linear"])
 
 itf.add_training_data(0.9)
