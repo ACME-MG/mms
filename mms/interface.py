@@ -6,13 +6,14 @@
 """
 
 # Libraries
-import os, re, time
+import inspect, os, re, time
 from mms.io.controller import Controller
 
 # Interface Class
 class Interface:
 
-    def __init__(self, title:str="", input_path:str="./data", output_path:str="./results", output_here:bool=False):
+    def __init__(self, title:str="", input_path:str="./data", output_path:str="./results",
+                 verbose:bool=True, output_here:bool=False):
         """
         Class to interact with the optimisation code
         
@@ -24,61 +25,34 @@ class Interface:
         * `output_here`: If true, just dumps the output in ths executing directory
         """
         
-        # Print starting message
+        # Initialise internal variables
+        self.__controller__  = Controller()
         self.__print_index__ = 0
+        self.__verbose__     = verbose
+        
+        # Starting code
         time_str = time.strftime("%A, %D, %H:%M:%S", time.localtime())
         self.__print__(f"\n  Starting on {time_str}\n", add_index=False)
-                
-        # Get start time
         self.__start_time__ = time.time()
         time_stamp = time.strftime("%y%m%d%H%M%S", time.localtime(self.__start_time__))
         
         # Define input and output
         self.__input_path__ = input_path
-        self.__get_input__  = lambda x : f"{self.__input_path__}/{x}"
-        title = "" if title == "" else f"_{title}"
+        file_path = inspect.currentframe().f_back.f_code.co_filename
+        self.__file_name__ = file_path.split("/")[-1].replace(".py","")
+        title = f"_{self.__file_name__}" if title == "" else f"_{title}"
         title = re.sub(r"[^a-zA-Z0-9_]", "", title.replace(" ", "_"))
         self.__output_dir__ = "." if output_here else time_stamp
         self.__output_path__ = "." if output_here else f"{output_path}/{self.__output_dir__}{title}"
+        
+        # Define input / output functions
+        self.__get_input__  = lambda x : f"{self.__input_path__}/{x}"
         self.__get_output__ = lambda x : f"{self.__output_path__}/{x}"
         
-        # Define controller
-        self.__controller__ = Controller()
-        
         # Create directories
-        safe_mkdir(output_path)
-        safe_mkdir(self.__output_path__)
-    
-    def __print__(self, message:str, add_index:bool=True) -> None:
-        """
-        Displays a message before running the command (for internal use only)
-        
-        Parameters:
-        * `message`:   the message to be displayed
-        * `add_index`: if true, adds a number at the start of the message
-        """
-        if add_index:
-            self.__print_index__ += 1
-            print(f"   {self.__print_index__})\t", end="")
-            message += " ..."
-        print(message)
-
-    def __del__(self):
-        """
-        Prints out the final message (for internal use only)
-        """
-        time_str = time.strftime("%A, %D, %H:%M:%S", time.localtime())
-        duration = round(time.time() - self.__start_time__)
-        duration_h = duration // 3600
-        duration_m = (duration - duration_h * 3600) // 60
-        duration_s = duration - duration_h * 3600 - duration_m * 60
-        duration_str_list = [
-            f"{duration_h} hours" if duration_h > 0 else "",
-            f"{duration_m} mins" if duration_m > 0 else "",
-            f"{duration_s} seconds" if duration_s > 0 else ""
-        ]
-        duration_str = ", ".join([d for d in duration_str_list if d != ""])
-        self.__print__(f"\n  Finished on {time_str} in {duration_str}\n", add_index=False)
+        if not output_here:
+            safe_mkdir(output_path)
+            safe_mkdir(self.__output_path__)
 
     def read_data(self, data_file:str) -> None:
         """
@@ -178,24 +152,26 @@ class Interface:
         loss_path = self.__get_output__(loss_file)
         self.__controller__.plot_loss_history(loss_path)
 
-    def save(self, model_file:str="surrogate") -> None:
+    def save(self, model_file:str=None) -> None:
         """
         Saves the surrogate model
         
         Parameters:
         * `model_file`: The file to save the surrogate model
         """
+        model_file = model_file if model_file != None else self.__file_name__
         self.__print__(f"Saving the surrogate model to '{model_file}'")
         model_path = self.__get_output__(model_file)
         self.__controller__.save(model_path)
 
-    def export_maps(self, map_file:str="maps") -> None:
+    def export_maps(self, map_file:str=None) -> None:
         """
         Exports information about the maps
 
         Parameters:
         * `map_file`: The file to save the mapping information
         """
+        map_file = map_file if map_file != None else self.__file_name__
         self.__print__(f"Saving the mapping information to '{map_file}'")
         map_path = self.__get_output__(map_file)
         self.__controller__.export_maps(map_path)
@@ -220,17 +196,19 @@ class Interface:
         self.__print__(f"Summarising the validation data {use_log_str}...")
         self.__controller__.print_validation(use_log, print_table)
 
-    def plot_validation(self, use_log:bool=False, plot_file:str="prd_plot") -> None:
+    def plot_validation(self, headers:list, use_log:bool=False, plot_file:str="prd_plot", label:str="") -> None:
         """
         Creates plots of the validation predictions
         
         Parameters:
-        * `use_log`:    Whether to use log when plotting the values
-        * `plot_file`:  The file name of the plot (without the extension)
+        * `headers`:   Headers for the outputs to plot
+        * `use_log`:   Whether to use log when plotting the values
+        * `plot_path`: The path name of the plot (without the extension)
+        * `label`:     The label for the plot
         """
-        self.__print__(f"Plotting the validation predictions to {plot_file}_*")
+        self.__print__(f"Plotting the validation predictions to {plot_file}.png")
         plot_path = self.__get_output__(plot_file)
-        self.__controller__.plot_validation(use_log, plot_path)
+        self.__controller__.plot_validation(headers, use_log, plot_path, label)
 
     def export_validation(self, export_file:str="prd_data") -> None:
         """
@@ -243,7 +221,47 @@ class Interface:
         export_path = self.__get_output__(export_file)
         self.__controller__.export_validation(export_path)
 
-# For safely making a directory
+    def __print__(self, message:str, add_index:bool=True) -> None:
+        """
+        Displays a message before running the command (for internal use only)
+        
+        Parameters:
+        * `message`:   the message to be displayed
+        * `add_index`: if true, adds a number at the start of the message
+        """
+        if not add_index:
+            print(message)
+        if not self.__verbose__ or not add_index:
+            return
+        self.__print_index__ += 1
+        print(f"   {self.__print_index__})\t{message} ...")
+
+    def __del__(self):
+        """
+        Prints out the final message (for internal use only)
+        """
+        time_str = time.strftime("%A, %D, %H:%M:%S", time.localtime())
+        duration = round(time.time() - self.__start_time__)
+        duration_h = duration // 3600
+        duration_m = (duration - duration_h * 3600) // 60
+        duration_s = duration - duration_h * 3600 - duration_m * 60
+        duration_str_list = [
+            f"{duration_h} hours" if duration_h > 0 else "",
+            f"{duration_m} mins" if duration_m > 0 else "",
+            f"{duration_s} seconds" if duration_s > 0 else ""
+        ]
+        duration_str = ", ".join([d for d in duration_str_list if d != ""])
+        duration_str = f"in {duration_str}" if duration_str != "" else ""
+        self.__print__(f"\n  Finished on {time_str} {duration_str}\n", add_index=False)
+
 def safe_mkdir(dir_path:str) -> None:
-    if not os.path.exists(dir_path):
+    """
+    For safely making a directory
+
+    Parameters:
+    * `dir_path`: The path to the directory
+    """
+    try:
         os.mkdir(dir_path)
+    except FileExistsError:
+        pass

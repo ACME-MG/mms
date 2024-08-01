@@ -10,6 +10,7 @@ import math, numpy as np, random
 import matplotlib.pyplot as plt
 from tabulate import tabulate
 from copy import deepcopy
+from mms.helper.io import get_file_path_exists
 from mms.io.converter import csv_to_dict, transpose, dict_to_csv
 from mms.surrogates.__surrogate__ import create_surrogate
 from mms.io.parameter import Parameter
@@ -244,51 +245,65 @@ class Controller:
             print(f"Average {use_log_str}error for {header} = {avg_error}%")
         print()
 
-    def plot_validation(self, use_log:bool=False, plot_path:str="prd_plot") -> None:
+    def plot_validation(self, headers:list, use_log:bool, plot_path:str, label:str="") -> None:
         """
         Creates plots of the validation predictions
         
         Parameters:
-        * `use_log`:    Whether to use log when plotting the values
-        * `plot_path`:  The path name of the plot (without the extension)
+        * `headers`:    for the outputs to plot
+        * `use_log`:    to use log when plotting the values
+        * `plot_path`:  path name of the plot (without the extension)
+        * `label`:      label for the plot
         """
 
-        # Get the training and validation data
-        train_sim_list, train_prd_list = self.__get_predictions__(self.train_input, self.train_output)
-        valid_sim_list, valid_prd_list = self.__get_predictions__(self.valid_input, self.valid_output)
-        all_data = train_sim_list + train_prd_list + valid_sim_list + valid_prd_list
+        # Get all the training and validation data
+        train_sim_dict, train_prd_dict = self.__get_predictions__(self.train_input, self.train_output)
+        valid_sim_dict, valid_prd_dict = self.__get_predictions__(self.valid_input, self.valid_output)
+        
+        # Flatten data
+        flatten = lambda nested_list : [item for sublist in nested_list for item in sublist]
+        train_sim_list = flatten([train_sim_dict[header] for header in headers if header in train_sim_dict.keys()])
+        train_prd_list = flatten([train_prd_dict[header] for header in headers if header in train_prd_dict.keys()])
+        valid_sim_list = flatten([valid_sim_dict[header] for header in headers if header in valid_sim_dict.keys()])
+        valid_prd_list = flatten([valid_prd_dict[header] for header in headers if header in valid_prd_dict.keys()])
 
         # Plot the training and validation data
         plt.figure(figsize=(5,5))
         plt.scatter(train_sim_list, train_prd_list, c="green")
         plt.scatter(valid_sim_list, valid_prd_list, c="red")
         
-        # Plot the line
+        # Define limits and plot the line
+        all_data = train_sim_list + train_prd_list + valid_sim_list + valid_prd_list
         min_limit = min(all_data)
         max_limit = max(all_data)
         line_list = [min_limit, max_limit]
         plt.plot(line_list, line_list, linestyle="--", c="black")
 
-        # Add 'conservative' region
+        # Add 'non-conservative' region
         triangle_vertices = np.array([[min_limit, min_limit], [max_limit, min_limit], [max_limit, max_limit]])
         plt.gca().fill(triangle_vertices[:, 0], triangle_vertices[:, 1], color="gray", alpha=0.3)
         plt.text(max_limit-0.48*(max_limit-min_limit), min_limit+0.05*(max_limit-min_limit), "Non-conservative", fontsize=10, color="black")
         
         # Define legend
-        handles = [plt.scatter([], [], color="green", label="Training"), plt.scatter([], [], color="red",   label="Validation")]
+        handles = [plt.scatter([], [], color="green", label="Training"), plt.scatter([], [], color="red", label="Validation")]
         legend = plt.legend(handles=handles, framealpha=1, edgecolor="black", fancybox=True, facecolor="white", fontsize=12, loc="upper left")
         plt.gca().add_artist(legend)
 
-        # Format plot
+        # Format scale, limits, and labels
         if use_log:
             plt.xscale("log")
             plt.yscale("log")
         plt.xlim(min_limit, max_limit)
         plt.ylim(min_limit, max_limit)
-        plt.xlabel("Validation", fontsize=15)
-        plt.ylabel("Prediction", fontsize=15)
+        plt.xlabel(f"Simulated {label}", fontsize=15)
+        plt.ylabel(f"Predicted {label}", fontsize=15)
+        
+        # Format position and add grid
+        plt.gca().set_position([0.17, 0.12, 0.75, 0.75])
+        plt.gca().grid(which="major", axis="both", color="SlateGray", linewidth=1, linestyle=":")
         
         # Save and clear plot
+        plot_path = get_file_path_exists(plot_path, "png")
         plt.savefig(plot_path)
         plt.clf()
 
@@ -331,7 +346,7 @@ class Controller:
         * `input_list`:  List of inputs
         * `output_list`: List of outputs
 
-        Returns the lists of simulated (training / validation) and predicted (surrogate) data
+        Returns the dictionaries of simulated (training / validation) and predicted (surrogate) data
         """
 
         # Get the outputs
@@ -344,13 +359,8 @@ class Controller:
         sim_output_dict = {key: value for key, value in zip(output_headers, sim_output)}
         prd_output_dict = {key: value for key, value in zip(output_headers, prd_output)}
         
-        # Get all points
-        flatten = lambda nested_list : [item for sublist in nested_list for item in sublist]
-        sim_list = flatten([sim_output_dict[header] for header in output_headers])
-        prd_list   = flatten([prd_output_dict[header] for header in output_headers])
-
         # Returns the data
-        return sim_list, prd_list
+        return sim_output_dict, prd_output_dict
 
     def __get_num_data__(self) -> int:
         """
