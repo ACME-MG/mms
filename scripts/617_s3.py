@@ -40,14 +40,14 @@ itf.plot_loss_history()
 # Validate the trained model
 itf.get_validation_data()
 itf.print_validation(use_log=True, print_table=False)
-itf.plot_validation(["average_stress"], label="Stress (MPa)")
-itf.plot_validation(["average_elastic"], label="Elastic Strain (mm/mm)")
-itf.plot_validation([f"g{grain_id}_stress" for grain_id in grain_ids], label="Stress (MPa)")
-itf.plot_validation([f"g{grain_id}_elastic" for grain_id in grain_ids], label="Elastic Strain (mm/mm)")
+itf.plot_validation(["average_stress"], label="Stress (MPa)", use_log=True)
+itf.plot_validation(["average_elastic"], label="Elastic Strain (mm/mm)", use_log=True)
+itf.plot_validation([f"g{grain_id}_stress" for grain_id in grain_ids], label="Stress (MPa)", use_log=True)
+itf.plot_validation([f"g{grain_id}_elastic" for grain_id in grain_ids], label="Elastic Strain (mm/mm)", use_log=True)
 itf.plot_validation([f"g{grain_id}_{field}" for grain_id in grain_ids
-                     for field in ["phi_1", "Phi", "phi_2"]], label="Orientation (rads)")
+                     for field in ["phi_1", "Phi", "phi_2"]], label="Orientation (rads)", use_log=True)
 itf.export_validation()
 
 # Save surrogate model and mapping
-itf.save()
-itf.export_maps()
+itf.save("sm")
+itf.export_maps("map")

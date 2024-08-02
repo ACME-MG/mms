@@ -185,8 +185,11 @@ class Controller:
                 combined_mapper_dict.update(mapper_dict)
             combined_mapper_dict_list.append(combined_mapper_dict)
 
+        # Initialise summary
+        param_types = ["input"]*len(self.input_exp_dict) + ["output"]*len(self.output_exp_dict)
+        mapper_summary = {"param_type": param_types, "param_name": param_names}
+
         # Combine mapper information
-        mapper_summary = {"param_name": param_names}
         mapper_keys = [list(combined_mapper_dict.keys()) for combined_mapper_dict in combined_mapper_dict_list]
         mapper_keys = list(set([item for sublist in mapper_keys for item in sublist]))
         for mapper_key in mapper_keys:
