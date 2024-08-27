@@ -131,7 +131,7 @@ class Interface:
         Parameters:
         * `surrogate_name`: The name of the surrogate
         """
-        self.__print__(f"Defining the '{surrogate_name}' surroggate model")
+        self.__print__(f"Defining the '{surrogate_name}' surrogate model")
         self.__controller__.define_surrogate(surrogate_name, **kwargs)
 
     def train(self, **kwargs) -> None:

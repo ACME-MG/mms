@@ -14,13 +14,14 @@ itf = Interface()
 itf.read_data("617_s3_sampled.csv")
 
 # Define grain IDs
-grain_ids = [15, 23, 45, 80, 101]
+grain_ids = [23, 53, 71, 79, 238]
 
 # Define input and output fields
 input_list = ["cp_tau_s", "cp_b", "cp_tau_0", "cp_n", "average_strain"]
-bulk_output_list = ["average_stress", "average_elastic"]
-grain_output_list = [f"g{grain_id}_{field}" for grain_id in grain_ids
-                     for field in ["stress", "elastic", "phi_1", "Phi", "phi_2"]]
+bulk_output_list = ["average_stress"]
+grain_output_list = [f"g{grain_id}_{field}" for grain_id in grain_ids for field in ["phi_1", "Phi", "phi_2"]]
+# bulk_output_list = ["average_stress", "average_elastic"]
+# grain_output_list = [f"g{grain_id}_{field}" for grain_id in grain_ids for field in ["stress", "elastic", "phi_1", "Phi", "phi_2"]]
 output_list = bulk_output_list + grain_output_list
 
 # Scale input and outputs
@@ -39,9 +40,9 @@ itf.plot_loss_history()
 itf.get_validation_data()
 itf.print_validation(use_log=True, print_table=False)
 itf.plot_validation(["average_stress"], label="Stress (MPa)", use_log=False)
-itf.plot_validation(["average_elastic"], label="Elastic Strain (mm/mm)", use_log=False)
-itf.plot_validation([f"g{grain_id}_stress" for grain_id in grain_ids], label="Stress (MPa)", use_log=False)
-itf.plot_validation([f"g{grain_id}_elastic" for grain_id in grain_ids], label="Elastic Strain (mm/mm)", use_log=False)
+# itf.plot_validation(["average_elastic"], label="Elastic Strain (mm/mm)", use_log=False)
+# itf.plot_validation([f"g{grain_id}_stress" for grain_id in grain_ids], label="Stress (MPa)", use_log=False)
+# itf.plot_validation([f"g{grain_id}_elastic" for grain_id in grain_ids], label="Elastic Strain (mm/mm)", use_log=False)
 itf.plot_validation([f"g{grain_id}_{field}" for grain_id in grain_ids
                      for field in ["phi_1", "Phi", "phi_2"]], label="Orientation (rads)", use_log=False)
 itf.export_validation()

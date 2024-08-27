@@ -15,10 +15,11 @@ from mms.analyser.pole_figure import get_lattice, IPF
 from mms.analyser.plotter import define_legend, save_plot
 
 # Constants
-SUR_PATH = "results/240826141327_617_s3/sm.pt"
-MAP_PATH = "results/240826141327_617_s3/map.csv"
+SUR_PATH = "results/240827094818_617_s3/sm.pt"
+MAP_PATH = "results/240827094818_617_s3/map.csv"
 EXP_PATH = "data/617_s3_exp.csv"
-SIM_PATH = "data/617_s3_summary.csv"
+# SIM_PATH = "data/617_s3_summary.csv"
+SIM_PATH = "data/summary.csv"
 
 def csv_to_dict(csv_path:str, delimeter:str=",") -> dict:
     """
@@ -237,7 +238,7 @@ class Model:
 
 # Define model parameters
 tau_sat  = 825
-b        = 0.3
+b        = 2
 tau_0    = 112
 n        = 15
 
@@ -248,9 +249,10 @@ res_dict = model.get_response(tau_sat, b, tau_0, n)
 
 # Reformat reorientation trajectories
 grain_ids = [int(key.replace("g","").replace("_phi_1","")) for key in res_dict.keys() if "phi_1" in key]
+grain_ids = [23, 53, 71, 79, 238]
 get_trajectories = lambda dict : [transpose([dict[f"g{grain_id}_{phi}"] for phi in ["phi_1", "Phi", "phi_2"]]) for grain_id in grain_ids]
 sim_trajectories = get_trajectories(sim_dict)
-res_trajectories = [t[1:] for t in get_trajectories(res_dict)]
+res_trajectories = get_trajectories(res_dict)
 
 # Plot stress-strain curve
 plt.figure(figsize=(5,5))
@@ -266,11 +268,11 @@ save_plot("plot_ss.png")
 # Plot reorientation trajectories
 ipf = IPF(get_lattice("fcc"))
 direction = [1,0,0]
-# ipf.plot_ipf_trajectory(sim_trajectories, direction, "plot", {"color": "blue", "linewidth": 2})
-# ipf.plot_ipf_trajectory(sim_trajectories, direction, "arrow", {"color": "blue", "head_width": 0.01, "head_length": 0.015})
-# ipf.plot_ipf_trajectory([[st[0]] for st in sim_trajectories], direction, "scatter", {"color": "blue", "s": 8**2})
-# for sim_trajectory, grain_id in zip(sim_trajectories, grain_ids):
-#     ipf.plot_ipf_trajectory([[sim_trajectory[0]]], direction, "text", {"color": "black", "fontsize": 8, "s": grain_id})
+ipf.plot_ipf_trajectory(sim_trajectories, direction, "plot", {"color": "blue", "linewidth": 2})
+ipf.plot_ipf_trajectory(sim_trajectories, direction, "arrow", {"color": "blue", "head_width": 0.01, "head_length": 0.015})
+ipf.plot_ipf_trajectory([[st[0]] for st in sim_trajectories], direction, "scatter", {"color": "blue", "s": 8**2})
+for sim_trajectory, grain_id in zip(sim_trajectories, grain_ids):
+    ipf.plot_ipf_trajectory([[sim_trajectory[0]]], direction, "text", {"color": "black", "fontsize": 8, "s": grain_id})
 ipf.plot_ipf_trajectory(res_trajectories, direction, "plot", {"color": "red", "linewidth": 1, "zorder": 3})
 ipf.plot_ipf_trajectory(res_trajectories, direction, "arrow", {"color": "red", "head_width": 0.0075, "head_length": 0.0075*1.5, "zorder": 3})
 ipf.plot_ipf_trajectory([[rt[0]] for rt in res_trajectories], direction, "scatter", {"color": "red", "s": 6**2, "zorder": 3})
