@@ -7,7 +7,7 @@
 
 # Libraries
 import inspect, os, re, time
-from mms.io.controller import Controller
+from mms.surrogator.controller import Controller
 
 # Interface Class
 class Interface:

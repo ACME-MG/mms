@@ -8,7 +8,7 @@
 # Libraries
 import math, os
 import pandas as pd
-from mms.helper.general import round_sf
+from mms.helper.general import round_sf, transpose
 
 def get_file_path_writable(file_path:str, extension:str):
     """
@@ -117,6 +117,37 @@ def dict_to_csv(data_dict:dict, csv_path:str, add_header:bool=True) -> None:
         row_str = ",".join(row_list)
         csv_fh.write(row_str + "\n")
     csv_fh.close()
+
+def dict_to_grid(data_dict:dict) -> list:
+    """
+    Converts a dictionary of values into a transposed list of lists
+    
+    Parameters:
+    * `data_dict`: Dictionary of values
+    
+    Returns the transposed lists of lists
+    """
+    list_of_lists = []
+    for key in data_dict.keys():
+        list_of_lists.append(data_dict[key])
+    list_of_lists = transpose(list_of_lists)
+    return list_of_lists
+
+def grid_to_dict(grid:list, headers:list) -> dict:
+    """
+    Converts a list of lists into a dictionary
+    
+    Parameters:
+    * `grid`: List of lists of values
+    * `headers`: List of keys for the dictionary
+    
+    Returns the dictionary
+    """
+    grid = transpose(grid)
+    data_dict = {}
+    for i in range(len(grid)):
+        data_dict[headers[i]] = grid[i]
+    return data_dict
 
 def read_excel(excel_path:str, sheet:str, column:int) -> list:
     """
