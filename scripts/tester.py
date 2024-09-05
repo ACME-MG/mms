@@ -6,20 +6,23 @@
 """
 
 # Libraries
-import torch, math
-import matplotlib.pyplot as plt
+import torch, math, os
 from copy import deepcopy
 import sys; sys.path += [".."]
 from mms.helper.general import transpose
 from mms.analyser.pole_figure import get_lattice, IPF
-from mms.analyser.plotter import define_legend, save_plot
+from mms.analyser.plotter import define_legend, save_plot, Plotter
 
 # Constants
-SUR_PATH = "results/240827094818_617_s3/sm.pt"
-MAP_PATH = "results/240827094818_617_s3/map.csv"
+# DIRECTORY = "240830134116_617_s3"
+DIRECTORY = sorted([item for item in os.listdir("results") if os.path.isdir(os.path.join("results", item))])[-1]
+SUR_PATH = f"results/{DIRECTORY}/sm.pt"
+MAP_PATH = f"results/{DIRECTORY}/map.csv"
 EXP_PATH = "data/617_s3_exp.csv"
-# SIM_PATH = "data/617_s3_summary.csv"
-SIM_PATH = "data/summary.csv"
+SIM_PATH = "data/617_s3_summary.csv"
+
+# Define model parameters
+TAU_S, B, TAU_0, N = 825, 2, 112, 15
 
 def csv_to_dict(csv_path:str, delimeter:str=",") -> dict:
     """
@@ -172,21 +175,21 @@ class Model:
             initial_value = exp_dict[param_name][0] if is_orientation else 0.0
             self.response_dict[param_name] = [initial_value]
 
-    def get_response(self, tau_sat:float, b:float, tau_0:float, n:float) -> dict:
+    def get_response(self, tau_s:float, b:float, tau_0:float, n:float) -> dict:
         """
         Gets the response of the model from the parameters
 
         Parameters:
-        * `tau_sat`: VoceSlipHardening parameter
-        * `b`:       VoceSlipHardening parameter
-        * `tau_0`:   VoceSlipHardening parameter
-        * `n`:       AsaroInelasticity parameter
+        * `tau_s`: VoceSlipHardening parameter
+        * `b`:     VoceSlipHardening parameter
+        * `tau_0`: VoceSlipHardening parameter
+        * `n`:     AsaroInelasticity parameter
         
         Returns the response as a dictionary
         """
 
         # Initialise
-        param_list = [tau_sat, b, tau_0, n]
+        param_list = [tau_s, b, tau_0, n]
         response_dict = deepcopy(self.response_dict)
         
         # Get outputs and combine
@@ -198,7 +201,8 @@ class Model:
                 response_dict[key].append(output_dict[key])
         
         # Adjust and return
-        response_dict["stress"] = response_dict.pop("average_stress")
+        if "average_stress" in response_dict.keys():
+            response_dict["stress"] = response_dict.pop("average_stress")
         return response_dict
 
     def get_output(self, input_list:list) -> dict:
@@ -236,45 +240,50 @@ class Model:
         output_dict = dict(zip(self.output_map["param_name"], output_list))
         return output_dict
 
-# Define model parameters
-tau_sat  = 825
-b        = 2
-tau_0    = 112
-n        = 15
-
 # Get all results
 sim_dict = csv_to_dict(SIM_PATH)
 model = Model(SUR_PATH, MAP_PATH, EXP_PATH)
-res_dict = model.get_response(tau_sat, b, tau_0, n)
+res_dict = model.get_response(TAU_S, B, TAU_0, N)
+exp_dict = csv_to_dict(EXP_PATH)
 
 # Reformat reorientation trajectories
 grain_ids = [int(key.replace("g","").replace("_phi_1","")) for key in res_dict.keys() if "phi_1" in key]
-grain_ids = [23, 53, 71, 79, 238]
 get_trajectories = lambda dict : [transpose([dict[f"g{grain_id}_{phi}"] for phi in ["phi_1", "Phi", "phi_2"]]) for grain_id in grain_ids]
 sim_trajectories = get_trajectories(sim_dict)
 res_trajectories = get_trajectories(res_dict)
+exp_trajectories = get_trajectories(exp_dict)
 
-# Plot stress-strain curve
-plt.figure(figsize=(5,5))
-plt.gca().set_position([0.17, 0.12, 0.75, 0.75])
-plt.gca().grid(which="major", axis="both", color="SlateGray", linewidth=1, linestyle=":")
-plt.xlabel("Strain (mm/mm)")
-plt.ylabel("Stress (MPa)")
-plt.plot(sim_dict["average_strain"], sim_dict["average_stress"], color="blue", label="CPFE")
-plt.plot(res_dict["strain"], res_dict["stress"], color="red", label="Surrogate")
-plt.legend(framealpha=1, edgecolor="black", fancybox=True, facecolor="white")
-save_plot("plot_ss.png")
-
-# Plot reorientation trajectories
+# Initialise IPF
 ipf = IPF(get_lattice("fcc"))
 direction = [1,0,0]
-ipf.plot_ipf_trajectory(sim_trajectories, direction, "plot", {"color": "blue", "linewidth": 2})
-ipf.plot_ipf_trajectory(sim_trajectories, direction, "arrow", {"color": "blue", "head_width": 0.01, "head_length": 0.015})
-ipf.plot_ipf_trajectory([[st[0]] for st in sim_trajectories], direction, "scatter", {"color": "blue", "s": 8**2})
-for sim_trajectory, grain_id in zip(sim_trajectories, grain_ids):
-    ipf.plot_ipf_trajectory([[sim_trajectory[0]]], direction, "text", {"color": "black", "fontsize": 8, "s": grain_id})
+
+# Plot experimental reorientation trajectories
+ipf.plot_ipf_trajectory(exp_trajectories, direction, "plot", {"color": "silver", "linewidth": 2})
+ipf.plot_ipf_trajectory(exp_trajectories, direction, "arrow", {"color": "silver", "head_width": 0.01, "head_length": 0.015})
+ipf.plot_ipf_trajectory([[et[0]] for et in exp_trajectories], direction, "scatter", {"color": "silver", "s": 8**2})
+for exp_trajectory, grain_id in zip(exp_trajectories, grain_ids):
+    ipf.plot_ipf_trajectory([[exp_trajectory[0]]], direction, "text", {"color": "black", "fontsize": 8, "s": grain_id})
+
+# Plot simulated reorientation trajectories
+ipf.plot_ipf_trajectory(sim_trajectories, direction, "plot", {"color": "blue", "linewidth": 1, "zorder": 3})
+ipf.plot_ipf_trajectory(sim_trajectories, direction, "arrow", {"color": "blue", "head_width": 0.0075, "head_length": 0.0075*1.5, "zorder": 3})
+ipf.plot_ipf_trajectory([[st[0]] for st in sim_trajectories], direction, "scatter", {"color": "blue", "s": 6**2, "zorder": 3})
+
+# Plot surrogate reorientation trajectories
 ipf.plot_ipf_trajectory(res_trajectories, direction, "plot", {"color": "red", "linewidth": 1, "zorder": 3})
 ipf.plot_ipf_trajectory(res_trajectories, direction, "arrow", {"color": "red", "head_width": 0.0075, "head_length": 0.0075*1.5, "zorder": 3})
 ipf.plot_ipf_trajectory([[rt[0]] for rt in res_trajectories], direction, "scatter", {"color": "red", "s": 6**2, "zorder": 3})
-define_legend(["blue", "red"], ["CPFE", "Surrogate"], ["line", "line"])
+
+# Save IPF
+define_legend(["silver", "blue", "red"], ["Experimental", "CPFE", "Surrogate"], ["scatter", "line", "line"])
 save_plot("plot_rt.png")
+
+# Plot stress-strain curve
+if "stress" in res_dict.keys():
+    plotter = Plotter("strain", "stress", "mm/mm", "MPa")
+    plotter.prep_plot()
+    plotter.scat_plot(exp_dict, "silver", "Experimental")
+    plotter.line_plot({"strain": sim_dict["average_strain"], "stress": sim_dict["average_stress"]}, "blue", "CPFE")
+    plotter.line_plot(res_dict, "red", "Surrogate")
+    plotter.set_legend()
+    save_plot("plot_ss.png")

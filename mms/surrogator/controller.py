@@ -130,13 +130,20 @@ class Controller:
         Parameters:
         * `surrogate_name`: The name of the surrogate
         """
+        
+        # Get and check sizes
         input_size = len(self.input_exp_dict.keys())
         output_size = len(self.output_exp_dict.keys())
         if input_size == 0:
             raise ValueError("There are no inputs defined!")
         if output_size == 0:
             raise ValueError("There are no outputs defined!")
-        self.surrogate = create_surrogate(surrogate_name, input_size, output_size, **kwargs)
+        
+        # Get unmapper functions and define the surrogate
+        input_unmapper = lambda x : self.__unmap_params__(x, self.input_exp_dict)
+        output_unmapper = lambda x : self.__unmap_params__(x, self.output_exp_dict)
+        self.surrogate = create_surrogate(surrogate_name, input_size, output_size,
+                                          input_unmapper, output_unmapper, **kwargs)
 
     def train_surrogate(self, **kwargs) -> None:
         """

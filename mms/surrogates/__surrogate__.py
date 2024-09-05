@@ -18,13 +18,20 @@ torch.set_default_tensor_type(torch.DoubleTensor)
 # The Surrogate Template Class
 class __Surrogate__:
 
-    def __init__(self, name:str):
+    def __init__(self, name:str, input_unmapper, output_unmapper):
         """
         Class for defining a surrogate
+        
+        Parameters:
+        * `name`:            The name of the surrogate model
+        * `input_unmapper`:  The unmapper function for the inputs
+        * `output_unmapper`: The unmapper function for the outputs
         """
         self.name = name
         self.results = {"train_loss": [], "valid_loss": []}
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.input_unmapper = input_unmapper
+        self.output_unmapper = output_unmapper
 
     def get_name(self) -> str:
         """
@@ -189,14 +196,17 @@ class SimpleDataset(Dataset):
         """
         return self.input_tensor[index], self.output_tensor[index]
 
-def create_surrogate(surrogate_name:str, input_size:int, output_size:int, **kwargs) -> __Surrogate__:
+def create_surrogate(surrogate_name:str, input_size:int, output_size:int,
+                     input_unmapper, output_unmapper, **kwargs) -> __Surrogate__:
     """
     Creates and returns a surrogate
 
     Parameters:
-    * `surrogate_name`: The name of the surrogate
-    * `input_size`:     The number of input variables
-    * `output_size`:    The number of output variables
+    * `surrogate_name`:  The name of the surrogate
+    * `input_size`:      The number of input variables
+    * `output_size`:     The number of output variables
+    * `input_unmapper`:  An unmapper function for the inputs
+    * `output_unmapper`: An unmapper function for the outputs
 
     Returns the surrogate
     """
@@ -220,6 +230,6 @@ def create_surrogate(surrogate_name:str, input_size:int, output_size:int, **kwar
     
     # Initialise and return the surrogate
     from surrogate_file import Surrogate
-    surrogate = Surrogate(surrogate_name)
+    surrogate = Surrogate(surrogate_name, input_unmapper, output_unmapper)
     surrogate.initialise(input_size, output_size, **kwargs)
     return surrogate

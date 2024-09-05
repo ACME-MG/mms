@@ -366,9 +366,9 @@ def get_lattice(structure:str="fcc"):
     Returns the lattice object
     """
     lattice = crystallography.CubicLattice(1.0)
-    if structure == "bcc":
+    if structure == "fcc":
         lattice.add_slip_system([1,1,0], [1,1,1])
-    elif structure == "fcc":
+    elif structure == "bcc":
         lattice.add_slip_system([1,1,1], [1,1,0])
         lattice.add_slip_system([1,1,1], [1,2,3])
         lattice.add_slip_system([1,1,1], [1,1,2])
