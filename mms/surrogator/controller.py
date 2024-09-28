@@ -139,11 +139,9 @@ class Controller:
         if output_size == 0:
             raise ValueError("There are no outputs defined!")
         
-        # Get unmapper functions and define the surrogate
-        input_unmapper = lambda x : self.__unmap_params__(x, self.input_exp_dict)
-        output_unmapper = lambda x : self.__unmap_params__(x, self.output_exp_dict)
+        # Define the surrogate
         self.surrogate = create_surrogate(surrogate_name, input_size, output_size,
-                                          input_unmapper, output_unmapper, **kwargs)
+                                          self.input_exp_dict, self.output_exp_dict, **kwargs)
 
     def train_surrogate(self, **kwargs) -> None:
         """

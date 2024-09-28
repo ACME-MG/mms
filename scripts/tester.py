@@ -22,7 +22,10 @@ EXP_PATH = "data/617_s3_exp.csv"
 SIM_PATH = "data/617_s3_summary.csv"
 
 # Define model parameters
-TAU_S, B, TAU_0, N = 825, 2, 112, 15
+# TAU_S, B, TAU_0, N = 825, 2, 112, 15
+TAU_S, B, TAU_0, N = 799.61, 0.63363, 149.7, 14.604
+# grain_ids = [125, 159, 189, 101, 249]
+grain_ids = [61, 71, 74, 82, 130, 152, 155]
 
 def csv_to_dict(csv_path:str, delimeter:str=",") -> dict:
     """
@@ -247,7 +250,9 @@ res_dict = model.get_response(TAU_S, B, TAU_0, N)
 exp_dict = csv_to_dict(EXP_PATH)
 
 # Reformat reorientation trajectories
-grain_ids = [int(key.replace("g","").replace("_phi_1","")) for key in res_dict.keys() if "phi_1" in key]
+# grain_ids = [int(key.replace("g","").replace("_phi_1","")) for key in res_dict.keys() if "phi_1" in key]
+# grain_ids = [141, 103, 230, 186, 93, 66, 183, 106, 192, 254, 241, 242, 95, 188, 228, 180, 99, 112, 243, 113, 46, 129, 207, 256, 49, 89, 197, 86, 134, 244, 136, 119, 128, 101, 47, 68, 303, 38, 110, 56, 155, 152, 169, 73, 74, 53, 214, 269, 88, 163, 235, 71, 42, 211, 32, 282, 48, 265, 156, 279, 257, 81, 84, 237, 204, 283, 107, 224, 239, 284, 149, 266, 231, 278, 58, 57, 80, 131, 216, 33, 83, 104, 158, 233, 41, 137, 82, 179, 182, 154, 258, 7, 167, 286, 59, 54, 21, 36, 193, 22, 274, 306, 187, 246, 191, 45, 255, 126, 190, 111, 252, 8, 299, 249, 226, 130, 273, 75, 304, 312, 97, 87, 271, 245, 76, 276, 50, 100, 292, 260, 289, 215, 151, 19, 248, 122, 209, 184, 309, 177, 25, 159, 24, 262, 30, 108, 240, 146, 217, 79, 250, 125, 77, 67, 234, 302, 206, 117, 295, 115, 272, 51, 114, 189, 91, 208, 102, 142, 118, 175, 109, 285, 90, 35, 143, 44, 212, 13, 300, 293, 196, 40, 263, 210, 27, 287, 236, 229, 12, 20, 205, 39, 14, 147, 308, 259, 251, 202, 16, 280, 315, 153, 277, 264, 150, 140, 70, 43, 275, 29, 268, 11, 37, 28, 166, 200, 34, 161, 198, 174, 85, 121, 247, 96, 60, 203, 55, 9, 281, 238, 253, 178, 120, 64, 31, 261, 123, 185, 133, 173, 218, 144, 10, 294, 135, 148, 23, 232, 199, 213, 61, 69, 176, 78, 164, 132, 181, 288, 220, 201, 52, 165, 63, 195, 219, 313, 172, 225, 72, 116, 227, 26, 291, 92, 270, 157, 194, 138, 223, 222, 221, 105, 162, 139]
+# grain_ids = grain_ids[:30]
 get_trajectories = lambda dict : [transpose([dict[f"g{grain_id}_{phi}"] for phi in ["phi_1", "Phi", "phi_2"]]) for grain_id in grain_ids]
 sim_trajectories = get_trajectories(sim_dict)
 res_trajectories = get_trajectories(res_dict)
@@ -264,10 +269,10 @@ ipf.plot_ipf_trajectory([[et[0]] for et in exp_trajectories], direction, "scatte
 for exp_trajectory, grain_id in zip(exp_trajectories, grain_ids):
     ipf.plot_ipf_trajectory([[exp_trajectory[0]]], direction, "text", {"color": "black", "fontsize": 8, "s": grain_id})
 
-# Plot simulated reorientation trajectories
-ipf.plot_ipf_trajectory(sim_trajectories, direction, "plot", {"color": "blue", "linewidth": 1, "zorder": 3})
-ipf.plot_ipf_trajectory(sim_trajectories, direction, "arrow", {"color": "blue", "head_width": 0.0075, "head_length": 0.0075*1.5, "zorder": 3})
-ipf.plot_ipf_trajectory([[st[0]] for st in sim_trajectories], direction, "scatter", {"color": "blue", "s": 6**2, "zorder": 3})
+# # Plot simulated reorientation trajectories
+# ipf.plot_ipf_trajectory(sim_trajectories, direction, "plot", {"color": "blue", "linewidth": 1, "zorder": 3})
+# ipf.plot_ipf_trajectory(sim_trajectories, direction, "arrow", {"color": "blue", "head_width": 0.0075, "head_length": 0.0075*1.5, "zorder": 3})
+# ipf.plot_ipf_trajectory([[st[0]] for st in sim_trajectories], direction, "scatter", {"color": "blue", "s": 6**2, "zorder": 3})
 
 # Plot surrogate reorientation trajectories
 ipf.plot_ipf_trajectory(res_trajectories, direction, "plot", {"color": "red", "linewidth": 1, "zorder": 3})
@@ -275,7 +280,8 @@ ipf.plot_ipf_trajectory(res_trajectories, direction, "arrow", {"color": "red", "
 ipf.plot_ipf_trajectory([[rt[0]] for rt in res_trajectories], direction, "scatter", {"color": "red", "s": 6**2, "zorder": 3})
 
 # Save IPF
-define_legend(["silver", "blue", "red"], ["Experimental", "CPFE", "Surrogate"], ["scatter", "line", "line"])
+# define_legend(["silver", "blue", "red"], ["Experimental", "CPFE", "Surrogate"], ["scatter", "line", "line"])
+define_legend(["silver", "red"], ["Experimental", "Surrogate"], ["scatter", "line"])
 save_plot("plot_rt.png")
 
 # Plot stress-strain curve

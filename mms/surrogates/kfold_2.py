@@ -1,6 +1,7 @@
 """
  Title:         KFold Neural network
- Description:   Neural network with regularisation and KFold cross validation 
+ Description:   Neural network with regularisation and KFold cross validation;
+                Uses different hyperparameter values
  Author:        Janzen Choi
 
 """
@@ -49,21 +50,6 @@ class Surrogate(__Surrogate__):
         self.kfold  = KFold(n_splits=self.num_splits, shuffle=True)
         self.loss_function = torch.nn.MSELoss()
         self.model_list = []
-
-    # def loss_function(self, target:torch.tensor, output:torch.tensor) -> torch.tensor:
-    #     """
-    #     Calculates the loss between the target and output values
-        
-    #     Parameters:
-    #     * `target`: The target values
-    #     * `output`: The output values
-        
-    #     Returns the loss values
-    #     """
-    #     error_stress = torch.nn.MSELoss()(target[:,:1], output[:,:1])
-    #     error_euler  = torch.nn.MSELoss()(target[:,1:], output[:,1:])
-    #     error_total  = error_stress + error_euler*100
-    #     return error_total
 
     def train(self, train_input:list, train_output:list, valid_input:list, valid_output:list) -> None:
         """

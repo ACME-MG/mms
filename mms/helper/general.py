@@ -9,6 +9,18 @@
 import numpy as np
 import math
 
+def sort_dict(unsorted_dict:dict) -> dict:
+    """
+    Sorts a dictionary in ascending order based on its values
+    
+    Parameters:
+    * `unsorted_dict`: Dictionary with unsorted values
+    
+    Returns the sorted dictionary
+    """
+    sorted_dict = dict(sorted(unsorted_dict.items(), key=lambda item: item[1]))
+    return sorted_dict
+
 def get_thinned_list(unthinned_list:list, density:int) -> list:
     """
     Gets a thinned list

@@ -18,20 +18,20 @@ torch.set_default_tensor_type(torch.DoubleTensor)
 # The Surrogate Template Class
 class __Surrogate__:
 
-    def __init__(self, name:str, input_unmapper, output_unmapper):
+    def __init__(self, name:str, input_dict, output_dict):
         """
         Class for defining a surrogate
         
         Parameters:
-        * `name`:            The name of the surrogate model
-        * `input_unmapper`:  The unmapper function for the inputs
-        * `output_unmapper`: The unmapper function for the outputs
+        * `name`:        The name of the surrogate model
+        * `input_dict`:  The dictionary containing the mapping of the inputs
+        * `output_dict`: The dictionary  containing the mapping of the outputs
         """
         self.name = name
         self.results = {"train_loss": [], "valid_loss": []}
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.input_unmapper = input_unmapper
-        self.output_unmapper = output_unmapper
+        self.input_dict = input_dict
+        self.output_dict = output_dict
 
     def get_name(self) -> str:
         """
@@ -112,6 +112,28 @@ class __Surrogate__:
         """
         raise NotImplementedError
 
+    def unmap_input(self, input_tensor:torch.tensor) -> torch.tensor:
+        """
+        Unmaps the input tensor
+        
+        Parameters:
+        * `input_tensor`: The tensor of inputs
+        
+        Returns the unmapped input tensor
+        """
+        return unmap_params(self.input_dict, input_tensor)
+
+    def unmap_output(self, output_tensor:torch.tensor) -> torch.tensor:
+        """
+        Unmaps the output tensor
+        
+        Parameters:
+        * `output_tensor`: The tensor of outputs
+        
+        Returns the unmapped output tensor
+        """
+        return unmap_params(self.output_dict, output_tensor)
+
     def predict(self, input_grid:list=None) -> list:
         """
         Returns a prediction
@@ -134,6 +156,50 @@ class __Surrogate__:
         """
         torch.save(self.model, f"{model_path}.pt")
 
+def unmap_params(param_dict:dict, param_tensor:torch.tensor) -> torch.tensor:
+    """
+    Unmaps the parameter tensor;
+    Only supports linear and log mapping (for now)
+    
+    Parameters:
+    * `param_dict`:   The dictionary containing the parameter objects
+    * `param_tensor`: The tensor containing the output values
+    
+    Returns the unmapped tensor
+    """
+
+    # Iterate through outputs
+    key_list = list(param_dict.keys())
+    for i, key in enumerate(key_list):
+        param = param_dict[key]
+        
+        # Iterate through mappers in reverse order (for unmapping)
+        mappers = param.get_mappers()
+        for mapper in mappers[::-1]:
+            
+            # Get mapper information
+            mapper_name = mapper.get_name()
+            mapper_info = mapper.get_info()
+            
+            # Conduct linear unmapping using tensor maths
+            if mapper_name == "linear":
+                in_l_bound  = mapper_info["in_l_bound"]
+                in_u_bound  = mapper_info["in_u_bound"]
+                out_l_bound = mapper_info["out_l_bound"]
+                out_u_bound = mapper_info["out_u_bound"]
+                if in_l_bound == in_u_bound or out_l_bound == out_u_bound:
+                    continue
+                factor = (out_u_bound-out_l_bound)/(in_u_bound-in_l_bound)
+                param_tensor[:,i] = (param_tensor[:,i]-out_l_bound)/factor+in_l_bound
+
+            # Conduct logarithmic unmapping using tensor maths
+            elif mapper_name == "log":
+                base = mapper_info["base"]
+                param_tensor[:,i] = torch.pow(base, param_tensor[:,i])
+
+    # Return unmapped tensor
+    return param_tensor    
+    
 # Simple PyTorch model
 class SimpleModel(torch.nn.Module):
     
@@ -197,16 +263,16 @@ class SimpleDataset(Dataset):
         return self.input_tensor[index], self.output_tensor[index]
 
 def create_surrogate(surrogate_name:str, input_size:int, output_size:int,
-                     input_unmapper, output_unmapper, **kwargs) -> __Surrogate__:
+                     input_dict:dict, output_dict:dict, **kwargs) -> __Surrogate__:
     """
     Creates and returns a surrogate
 
     Parameters:
-    * `surrogate_name`:  The name of the surrogate
-    * `input_size`:      The number of input variables
-    * `output_size`:     The number of output variables
-    * `input_unmapper`:  An unmapper function for the inputs
-    * `output_unmapper`: An unmapper function for the outputs
+    * `surrogate_name`: The name of the surrogate
+    * `input_size`:     The number of input variables
+    * `output_size`:    The number of output variables
+    * `input_dict`:     The dictionary containing the mapping of the inputs
+    * `output_dict`:    The dictionary  containing the mapping of the outputs
 
     Returns the surrogate
     """
@@ -230,6 +296,6 @@ def create_surrogate(surrogate_name:str, input_size:int, output_size:int,
     
     # Initialise and return the surrogate
     from surrogate_file import Surrogate
-    surrogate = Surrogate(surrogate_name, input_unmapper, output_unmapper)
+    surrogate = Surrogate(surrogate_name, input_dict, output_dict)
     surrogate.initialise(input_size, output_size, **kwargs)
     return surrogate
