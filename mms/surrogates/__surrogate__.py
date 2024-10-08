@@ -29,7 +29,9 @@ class __Surrogate__:
         """
         self.name = name
         self.results = {"train_loss": [], "valid_loss": []}
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device_name = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = torch.device(device_name)
+        print(f"\n  Running Torch with '{device_name}' ...\n")
         self.input_dict = input_dict
         self.output_dict = output_dict
 
@@ -159,7 +161,7 @@ class __Surrogate__:
 def unmap_params(param_dict:dict, param_tensor:torch.tensor) -> torch.tensor:
     """
     Unmaps the parameter tensor;
-    Only supports linear and log mapping (for now)
+    Only supports linear (for now)
     
     Parameters:
     * `param_dict`:   The dictionary containing the parameter objects
@@ -189,13 +191,9 @@ def unmap_params(param_dict:dict, param_tensor:torch.tensor) -> torch.tensor:
                 out_u_bound = mapper_info["out_u_bound"]
                 if in_l_bound == in_u_bound or out_l_bound == out_u_bound:
                     continue
-                factor = (out_u_bound-out_l_bound)/(in_u_bound-in_l_bound)
-                param_tensor[:,i] = (param_tensor[:,i]-out_l_bound)/factor+in_l_bound
-
-            # Conduct logarithmic unmapping using tensor maths
-            elif mapper_name == "log":
-                base = mapper_info["base"]
-                param_tensor[:,i] = torch.pow(base, param_tensor[:,i])
+                param_tensor[:,i].sub_(out_l_bound)
+                param_tensor[:,i].div_((out_u_bound-out_l_bound)/(in_u_bound-in_l_bound))
+                param_tensor[:,i].add_(in_l_bound)
 
     # Return unmapped tensor
     return param_tensor    

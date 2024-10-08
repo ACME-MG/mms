@@ -12,6 +12,45 @@
 import torch
 from mms.maths.csl import get_symmetry_matrices
 
+def get_torch_geodesic(euler_1_tensor:torch.tensor, euler_2_tensor:torch.tensor) -> torch.tensor:
+    """
+    Calculates the geodesic distance using torch operations
+
+    Parameters:
+    * `euler_1_tensor`: A tensor of the first euler-bunge angles
+    * `euler_2_tensor`: A tensor of the second euler-bunge angles
+    
+    Returns the geodesic distance
+    """
+    quat_1_tensor = euler_to_quat_torch(euler_1_tensor)
+    quat_2_tensor = euler_to_quat_torch(euler_2_tensor)
+    quat_1_tensor = quat_1_tensor/torch.norm(quat_1_tensor, dim=-1, keepdim=True)
+    quat_2_tensor = quat_2_tensor/torch.norm(quat_2_tensor, dim=-1, keepdim=True)
+    dot_product = torch.sum(quat_1_tensor*quat_2_tensor, dim=-1)
+    dot_product = torch.clamp(dot_product, -1.0, 1.0)
+    distance = torch.acos(torch.abs(dot_product))
+    return distance
+
+def euler_to_quat_torch(euler_tensor:torch.tensor) -> torch.tensor:
+    """
+    Converts euler-bunge tensor into quaternion tensor
+
+    Parameters:
+    * `euler_tensor`: A tensor of the euler-bunge angles (rads)
+    
+    Returns the quaternion tensor
+    """
+    phi_1 = euler_tensor[:, 0]
+    Phi   = euler_tensor[:, 1]
+    phi_2 = euler_tensor[:, 2]
+    q0 = torch.cos((phi_1 + phi_2) / 2) * torch.cos(Phi / 2)
+    q1 = torch.sin((phi_1 - phi_2) / 2) * torch.sin(Phi / 2)
+    q2 = torch.cos((phi_1 - phi_2) / 2) * torch.sin(Phi / 2)
+    q3 = torch.sin((phi_1 + phi_2) / 2) * torch.cos(Phi / 2)
+    quaternion = torch.stack((q0, q1, q2, q3), dim=-1)
+    quaternion = quaternion / quaternion.norm(dim=-1, keepdim=True)
+    return quaternion
+
 def get_torch_misorientation(euler_1_tensor:torch.tensor, euler_2_tensor:torch.tensor, crystal_type:str) -> torch.tensor:
     """
     Calculates the misorientation using torch operations
@@ -21,12 +60,10 @@ def get_torch_misorientation(euler_1_tensor:torch.tensor, euler_2_tensor:torch.t
     * `euler_2_tensor`: A tensor of the second euler-bunge angles
     * `crystal_type`:   The type of crystal structure (e.g., cubic)
     
-    Returns a list of misorientations
+    Returns the misorientation
     """
-    misorientations_1 = get_torch_misorientations(euler_1_tensor, euler_2_tensor, crystal_type)
-    misorientations_2 = get_torch_misorientations(euler_2_tensor, euler_1_tensor, crystal_type)
-    misorientations = misorientations_1 + misorientations_2
-    return torch.min(misorientations)/2 # I don't know why we divide but it works
+    misorientations = get_torch_misorientations(euler_1_tensor, euler_2_tensor, crystal_type)
+    return torch.min(misorientations)
     
 def get_torch_misorientations(euler_1_tensor:torch.tensor, euler_2_tensor:torch.tensor, crystal_type:str) -> torch.tensor:
     """

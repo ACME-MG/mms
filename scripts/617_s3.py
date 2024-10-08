@@ -35,12 +35,14 @@ output_list = bulk_output_list + grain_output_list
 for input in input_list:
     itf.add_input(input, ["log", "linear"])
 for output in output_list:
-    itf.add_output(output, ["log", "linear"])
+    # itf.add_output(output, ["log", "linear"])
+    itf.add_output(output, ["linear"])
 
 # Train surrogate model
 # itf.define("kfold", num_splits=5, epochs=2000, batch_size=32, verbose=True)
 # itf.define("kfold_2", num_splits=5, epochs=3000, batch_size=64, verbose=True)
-itf.define("kfold_mori", num_splits=3, epochs=5, batch_size=16, verbose=True)
+# itf.define("kfold_2", num_splits=5, epochs=500, batch_size=64, verbose=True)
+itf.define("kfold_geodesic", num_splits=5, epochs=500, batch_size=64, verbose=True, geodesic_weight=200)
 itf.add_training_data()
 itf.train()
 itf.plot_loss_history()

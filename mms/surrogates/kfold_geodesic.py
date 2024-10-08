@@ -1,6 +1,6 @@
 """
- Title:         KFold Neural network with Misorientation
- Description:   Neural network with regularisation, KFold cross validation, and misorientation 
+ Title:         KFold Neural network with Geodesic distance
+ Description:   Neural network with regularisation, KFold cross validation, and geodesic distance 
  Author:        Janzen Choi
 
 """
@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from sklearn.model_selection import KFold
 from mms.surrogates.__surrogate__ import __Surrogate__, SimpleModel, SimpleDataset
 from mms.helper.general import integer_to_ordinal
-from mms.maths.torch_maths import get_torch_misorientation
+from mms.maths.torch_maths import get_torch_geodesic
 
 # Constants
 HIDDEN_LAYER_SIZES  = [128, 256, 512]
@@ -25,19 +25,18 @@ PATIENCE_AMOUNT     = 100
 class Surrogate(__Surrogate__):
     
     def initialise(self, input_size:int, output_size:int, num_splits:int=5, epochs:int=1000,
-                   batch_size:int=32, verbose:bool=False, crystal_type:str="cubic", mori_weight:float=1.0):
+                   batch_size:int=32, verbose:bool=False, geodesic_weight:float=1.0):
         """
         Defines the parameters of neural network surrogate model
         
         Parameters:
-        * `input_size`:   The number of inputs
-        * `output_size`:  The number of outputs
-        * `num_splits`:   The number of kfold splits (k)
-        * `epochs`:       The number of epochs
-        * `batch_size`:   The size of each batch
-        * `verbose`:      Whether to display updates or not
-        * `crystal_type`: Type of crystal structure to calculate misorientation
-        * `mori_weight`:  How much to weigh the misorientation losses
+        * `input_size`:      The number of inputs
+        * `output_size`:     The number of outputs
+        * `num_splits`:      The number of kfold splits (k)
+        * `epochs`:          The number of epochs
+        * `batch_size`:      The size of each batch
+        * `verbose`:         Whether to display updates or not
+        * `geodesic_weight`: How much to weigh the geodesic losses
         """
 
         # Initialise input variables
@@ -47,8 +46,7 @@ class Surrogate(__Surrogate__):
         self.epochs       = epochs
         self.batch_size   = batch_size
         self.verbose      = verbose
-        self.crystal_type = crystal_type
-        self.mori_weight  = mori_weight
+        self.geodesic_weight = geodesic_weight
 
         # Initialise internal variables
         self.device = self.get_device()
@@ -59,7 +57,7 @@ class Surrogate(__Surrogate__):
         """
         Calculates the loss between the target and output values;
         Calculates the first output using MSE and the remaining outputs
-        in groups of three using misorientation
+        in groups of three using geodesic
         
         Parameters:
         * `target`: The target values
@@ -67,42 +65,33 @@ class Surrogate(__Surrogate__):
         
         Returns the loss values
         """
-        
+        # return torch.nn.MSELoss()(target, output)
+
         # Calculate the error for stress ([0])
         target_stress = target[:,0]
         output_stress = output[:,0]
         stress_loss = torch.mean((target_stress-output_stress)**2)
-        
-        # Conduct unmapping for misorientation calculations
-        unmapped_output = self.unmap_output(output)
+
+        # Conduct unmapping for geodesic calculations
         unmapped_target = self.unmap_output(target)
-        
-        # Calculate the misorientation for orientations ([3*n+1,3*n+4])
-        mean_misorientation_list = []
+        unmapped_output = self.unmap_output(output)
+
+        # Flatten angles into 1D tensors while preserving gradients
         num_angles = int((output.shape[1]-1)//3)
-        for angle_index in range(num_angles):
-            
-            # Get specific angles
-            target_angles = unmapped_target[:,3*angle_index+1:3*angle_index+4]
-            output_angles = unmapped_output[:,3*angle_index+1:3*angle_index+4]
-            
-            # Get misorientations for each angle pair
-            misorientation_list = []
-            for target_angle, output_angle in zip(target_angles, output_angles):
-                misorientation = get_torch_misorientation(target_angle, output_angle, self.crystal_type)
-                misorientation_list.append(misorientation)
-            
-            # Average and add to misorientation
-            misorientation_list = torch.tensor(misorientation_list, dtype=torch.float32)
-            misorientation_mean = torch.mean(misorientation_list)
-            mean_misorientation_list.append(misorientation_mean)
+        reshape_tensor = lambda x : x.reshape(x.shape[0]*num_angles, x.shape[1]//num_angles)
+        target_angles = reshape_tensor(unmapped_target[:,1:])
+        output_angles = reshape_tensor(unmapped_output[:,1:])
+
+        # Calculate the geodesic loss
+        geodesic_tensor = get_torch_geodesic(target_angles, output_angles)
+        geodesic_tensor.pow_(2)
+        geodesic_loss = torch.mean(geodesic_tensor)
         
         # Combine losses and return
-        mean_misorientation_list = torch.tensor(mean_misorientation_list, dtype=torch.float32)
-        misorientation_loss = torch.mean(mean_misorientation_list)*num_angles
-        total_loss = stress_loss + misorientation_loss*self.mori_weight
+        num_angles = int((output.shape[1]-1)//3)
+        total_loss = stress_loss + geodesic_loss*num_angles*self.geodesic_weight
         return total_loss
-        
+
     def train(self, train_input:list, train_output:list, valid_input:list, valid_output:list) -> None:
         """
         Trains the model
@@ -141,7 +130,7 @@ class Surrogate(__Surrogate__):
             # Train the model
             valid_loss_list = []
             for epoch in range(1,self.epochs+1):
-                
+
                 # Train and get loss
                 self.train_fold(model, optimiser, train_loader)
                 train_loss = self.get_loss(model, train_loader)
@@ -194,7 +183,7 @@ class Surrogate(__Surrogate__):
             data, target = data.to(self.device), target.to(self.device)
             optimiser.zero_grad()
             output = model(data)
-            loss = self.loss_function(output, target)
+            loss = self.loss_function(target, output)
             loss.backward()
             optimiser.step()
 
