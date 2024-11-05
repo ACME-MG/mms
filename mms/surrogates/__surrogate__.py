@@ -18,7 +18,7 @@ torch.set_default_tensor_type(torch.DoubleTensor)
 # The Surrogate Template Class
 class __Surrogate__:
 
-    def __init__(self, name:str, input_dict, output_dict):
+    def __init__(self, name:str, input_dict:dict, output_dict:dict):
         """
         Class for defining a surrogate
         
@@ -29,9 +29,6 @@ class __Surrogate__:
         """
         self.name = name
         self.results = {"train_loss": [], "valid_loss": []}
-        device_name = "cuda" if torch.cuda.is_available() else "cpu"
-        self.device = torch.device(device_name)
-        print(f"\n  Running Torch with '{device_name}' ...\n")
         self.input_dict = input_dict
         self.output_dict = output_dict
 
@@ -40,6 +37,18 @@ class __Surrogate__:
         Gets the name of the msurrogate
         """
         return self.name
+
+    def set_device(self, device_name:str) -> None:
+        """
+        Sets the device name
+
+        Parameters:
+        * `device_name`: The name of the device
+        """
+        if device_name == None:
+            device_name = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = torch.device(device_name)
+        print(f"\n  Running on '{device_name}' ...\n")
 
     def get_device(self) -> torch.device:
         """
@@ -201,7 +210,7 @@ def unmap_params(param_dict:dict, param_tensor:torch.tensor) -> torch.tensor:
 # Simple PyTorch model
 class SimpleModel(torch.nn.Module):
     
-    def __init__(self, input_size:int, output_size:int, hidden_sizes:list):
+    def __init__(self, input_size:int, output_size:int, hidden_sizes:list, device:torch.device):
         """
         Defines the structure of the neural network
         
@@ -212,9 +221,13 @@ class SimpleModel(torch.nn.Module):
         """
         super(SimpleModel, self).__init__()
         self.input_layer   = torch.nn.Linear(input_size, hidden_sizes[0])
-        self.hidden_layers = [torch.nn.Linear(hidden_sizes[i], hidden_sizes[i+1])
-                              for i in range(len(hidden_sizes)-1)]
+        self.hidden_layers = torch.nn.ModuleList(
+            [torch.nn.Linear(hidden_sizes[i], hidden_sizes[i+1])
+             for i in range(len(hidden_sizes)-1)]
+        )
         self.output_layer  = torch.nn.Linear(hidden_sizes[-1], output_size)
+        self.device = device
+        self.to(device)
     
     def forward(self, input_tensor:torch.Tensor) -> torch.Tensor:
         """
@@ -225,6 +238,7 @@ class SimpleModel(torch.nn.Module):
         
         Returns the output of the network as a tensor
         """
+        input_tensor = input_tensor.to(self.device)
         output_tensor = torch.relu(self.input_layer(input_tensor))
         for layer in self.hidden_layers:
             output_tensor = torch.relu(layer(output_tensor))
@@ -260,13 +274,14 @@ class SimpleDataset(Dataset):
         """
         return self.input_tensor[index], self.output_tensor[index]
 
-def create_surrogate(surrogate_name:str, input_size:int, output_size:int,
+def create_surrogate(surrogate_name:str, device_name:str, input_size:int, output_size:int,
                      input_dict:dict, output_dict:dict, **kwargs) -> __Surrogate__:
     """
     Creates and returns a surrogate
 
     Parameters:
     * `surrogate_name`: The name of the surrogate
+    * `device_name`:    The name of the device
     * `input_size`:     The number of input variables
     * `output_size`:    The number of output variables
     * `input_dict`:     The dictionary containing the mapping of the inputs
@@ -295,5 +310,6 @@ def create_surrogate(surrogate_name:str, input_size:int, output_size:int,
     # Initialise and return the surrogate
     from surrogate_file import Surrogate
     surrogate = Surrogate(surrogate_name, input_dict, output_dict)
+    surrogate.set_device(device_name)
     surrogate.initialise(input_size, output_size, **kwargs)
     return surrogate

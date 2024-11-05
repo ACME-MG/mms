@@ -124,15 +124,18 @@ class Interface:
             self.__print__(f"Adding {round(ratio*100)}% of the data points to the validation dataset")
         self.__controller__.add_validation_data(ratio)
     
-    def define(self, surrogate_name:str, **kwargs) -> None:
+    def define_surrogate(self, surrogate_name:str, device_name:str=None, **kwargs) -> None:
         """
         Defines the surrogate
 
         Parameters:
         * `surrogate_name`: The name of the surrogate
+        * `device_name`:    The name of the device; uses default device if unspecified
         """
         self.__print__(f"Defining the '{surrogate_name}' surrogate model")
-        self.__controller__.define_surrogate(surrogate_name, **kwargs)
+        if device_name != None and not device_name in ["cpu", "cuda"]:
+            raise ValueError("Selected device must be either 'cpu' or 'cuda'!")
+        self.__controller__.define_surrogate(surrogate_name, device_name, **kwargs)
 
     def train(self, **kwargs) -> None:
         """

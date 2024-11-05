@@ -123,12 +123,13 @@ class Controller:
         self.valid_input = [self.train_input[i] for i in range(len(self.train_input)) if i in valid_indexes]
         self.valid_output = [self.train_output[i] for i in range(len(self.train_output)) if i in valid_indexes]
 
-    def define_surrogate(self, surrogate_name:str, **kwargs) -> None:
+    def define_surrogate(self, surrogate_name:str, device_name:str=None, **kwargs) -> None:
         """
         Defines the surrogate
 
         Parameters:
         * `surrogate_name`: The name of the surrogate
+        * `device_name`:    The name of the device; uses default device if unspecified
         """
         
         # Get and check sizes
@@ -140,7 +141,7 @@ class Controller:
             raise ValueError("There are no outputs defined!")
         
         # Define the surrogate
-        self.surrogate = create_surrogate(surrogate_name, input_size, output_size,
+        self.surrogate = create_surrogate(surrogate_name, device_name, input_size, output_size,
                                           self.input_exp_dict, self.output_exp_dict, **kwargs)
 
     def train_surrogate(self, **kwargs) -> None:

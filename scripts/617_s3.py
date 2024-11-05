@@ -23,7 +23,7 @@ data_dict = csv_to_dict(f"data/{data_file}")
 grain_ids = [int(key.replace("_phi_1","").replace("g","")) for key in data_dict.keys() if "_phi_1" in key]
 # for grain_id in [98, 123, 140, 196]:
 #     grain_ids.remove(grain_id)
-grain_ids = grain_ids[:2]
+# grain_ids = grain_ids[:10]
 
 # Define input and output fields
 input_list = ["cp_tau_s", "cp_b", "cp_tau_0", "cp_n", "average_strain"]
@@ -39,10 +39,10 @@ for output in output_list:
     itf.add_output(output, ["linear"])
 
 # Train surrogate model
-# itf.define("kfold", num_splits=5, epochs=2000, batch_size=32, verbose=True)
-# itf.define("kfold_2", num_splits=5, epochs=3000, batch_size=64, verbose=True)
-# itf.define("kfold_2", num_splits=5, epochs=500, batch_size=64, verbose=True)
-itf.define("kfold_geodesic", num_splits=5, epochs=500, batch_size=64, verbose=True, geodesic_weight=200)
+# itf.define_surrogate("kfold", num_splits=5, epochs=2000, batch_size=32, verbose=True)
+itf.define_surrogate("kfold_2", num_splits=5, epochs=2000, batch_size=64, verbose=True)
+# itf.define_surrogate("kfold_2", num_splits=5, epochs=500, batch_size=64, verbose=True)
+# itf.define_surrogate("kfold_geodesic", num_splits=5, epochs=2000, batch_size=64, verbose=True, geodesic_weight=200)
 itf.add_training_data()
 itf.train()
 itf.plot_loss_history()

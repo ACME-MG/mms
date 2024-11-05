@@ -134,7 +134,7 @@ class Surrogate(__Surrogate__):
             )
 
             # Initialise model, optimiser, and scheduler
-            model = SimpleModel(self.input_size, self.output_size, HIDDEN_LAYER_SIZES)
+            model = SimpleModel(self.input_size, self.output_size, HIDDEN_LAYER_SIZES, self.device)
             optimiser = torch.optim.Adam(model.parameters(), lr=START_LEARNING_RATE, weight_decay=WEIGHT_DECAY)
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimiser, "min", factor=REDUCTION_FACTOR, patience=PATIENCE_AMOUNT)
             

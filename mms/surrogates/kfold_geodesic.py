@@ -6,7 +6,7 @@
 """
 
 # Libraries
-import torch, numpy as np
+import torch, numpy as np, time
 from torch.utils.data import DataLoader
 from sklearn.model_selection import KFold
 from mms.surrogates.__surrogate__ import __Surrogate__, SimpleModel, SimpleDataset
@@ -65,7 +65,10 @@ class Surrogate(__Surrogate__):
         
         Returns the loss values
         """
-        # return torch.nn.MSELoss()(target, output)
+
+        # Check device consistency
+        device = target.device  # Assuming target is already on the correct device
+        output = output.to(device)
 
         # Calculate the error for stress ([0])
         target_stress = target[:,0]
@@ -89,7 +92,7 @@ class Surrogate(__Surrogate__):
         
         # Combine losses and return
         num_angles = int((output.shape[1]-1)//3)
-        total_loss = stress_loss + geodesic_loss*num_angles*self.geodesic_weight
+        total_loss = (stress_loss+geodesic_loss*num_angles*self.geodesic_weight)/(num_angles+1)
         return total_loss
 
     def train(self, train_input:list, train_output:list, valid_input:list, valid_output:list) -> None:
@@ -123,12 +126,13 @@ class Surrogate(__Surrogate__):
             )
 
             # Initialise model, optimiser, and scheduler
-            model = SimpleModel(self.input_size, self.output_size, HIDDEN_LAYER_SIZES)
+            model = SimpleModel(self.input_size, self.output_size, HIDDEN_LAYER_SIZES, self.device)
             optimiser = torch.optim.Adam(model.parameters(), lr=START_LEARNING_RATE, weight_decay=WEIGHT_DECAY)
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimiser, "min", factor=REDUCTION_FACTOR, patience=PATIENCE_AMOUNT)
             
             # Train the model
             valid_loss_list = []
+            start_time = time.time()
             for epoch in range(1,self.epochs+1):
 
                 # Train and get loss
@@ -141,7 +145,8 @@ class Surrogate(__Surrogate__):
 
                 # Display loss
                 if self.verbose and epoch % (self.epochs//10) == 0:
-                    print("Epoch={}, \tTrainLoss={:0.3}, \tValidLoss={:0.3}".format(epoch, train_loss, valid_loss))
+                    print("Epoch={}, \tTrainLoss={:0.3}, \tValidLoss={:0.3}, \tDuration={:0.3}s".format(epoch, train_loss, valid_loss, time.time()-start_time))
+                    start_time = time.time()
 
                 # Update scheduler
                 scheduler.step(valid_loss)
