@@ -12,6 +12,10 @@ from mms.helper.io import csv_to_dict
 
 # Constants
 NUM_LH = 2
+# STRAIN_FIELD = "average_grain_strain"
+# STRESS_FIELD = "average_grain_stress"
+STRAIN_FIELD = "average_strain"
+STRESS_FIELD = "average_stress"
 
 # Read data
 itf = Interface(f"617_s3_lh{NUM_LH}")
@@ -24,10 +28,9 @@ grain_ids = [int(key.replace("_phi_1","").replace("g","")) for key in data_dict.
 grain_ids = [207, 79, 164, 167, 309]
 
 # Define input and output fields
-input_list = [f"cp_lh_{i}" for i in range(NUM_LH)] + ["cp_tau_0", "cp_n", "average_grain_strain"]
-bulk_output_list = ["average_grain_stress"]
+input_list = [f"cp_lh_{i}" for i in range(NUM_LH)] + ["cp_tau_0", "cp_n", STRAIN_FIELD]
 grain_output_list = [f"g{grain_id}_{field}" for grain_id in grain_ids for field in ["phi_1", "Phi", "phi_2"]]
-output_list = bulk_output_list + grain_output_list
+output_list = [STRESS_FIELD] + grain_output_list
 
 # Scale input and outputs
 for input in input_list:
@@ -52,7 +55,7 @@ itf.export_maps("map")
 itf.get_validation_data()
 itf.print_validation(use_log=True, print_table=False)
 itf.plot_validation(
-    headers   = ["average_grain_stress"],
+    headers   = [STRESS_FIELD],
     label     = "Stress (MPa)",
     use_log   = False,
     plot_file = "stress"
