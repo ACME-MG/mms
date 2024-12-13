@@ -120,7 +120,8 @@ class Surrogate(__Surrogate__):
         min_index = loss_list.index(min_loss)
         self.model = self.model_list[min_index]["model"]
         self.valid_indexes = self.model_list[min_index]["valid"]
-        print(f"\nSelected the {integer_to_ordinal(min_index+1)} model\n")
+        if self.verbose:
+            print(f"\nSelected the {integer_to_ordinal(min_index+1)} model\n")
 
     def get_valid_indexes(self) -> list:
         """

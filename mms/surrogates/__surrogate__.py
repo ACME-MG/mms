@@ -48,7 +48,6 @@ class __Surrogate__:
         if device_name == None:
             device_name = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(device_name)
-        print(f"\n  Running on '{device_name}' ...\n")
 
     def get_device(self) -> torch.device:
         """

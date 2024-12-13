@@ -28,7 +28,7 @@ grain_ids = [int(key.replace("_phi_1","").replace("g","")) for key in data_dict.
 grain_ids = [207, 79, 164, 167, 309]
 
 # Define input and output fields
-input_list = [f"cp_lh_{i}" for i in range(NUM_LH)] + ["cp_tau_0", "cp_n", STRAIN_FIELD]
+input_list = [f"cp_lh_{i}" for i in range(NUM_LH)] + ["cp_tau_0", "cp_n", "cp_gamma_0", STRAIN_FIELD]
 grain_output_list = [f"g{grain_id}_{field}" for grain_id in grain_ids for field in ["phi_1", "Phi", "phi_2"]]
 output_list = [STRESS_FIELD] + grain_output_list
 
