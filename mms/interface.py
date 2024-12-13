@@ -232,10 +232,10 @@ class Interface:
         * `message`:   the message to be displayed
         * `add_index`: if true, adds a number at the start of the message
         """
-        if not self.__verbose__ or not add_index:
-            return
         if not add_index:
             print(message)
+        if not self.__verbose__ or not add_index:
+            return
         self.__print_index__ += 1
         print(f"   {self.__print_index__})\t{message} ...")
 
