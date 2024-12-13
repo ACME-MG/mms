@@ -40,8 +40,8 @@ for output in output_list:
     # itf.add_output(output, ["linear"])
 
 # Train surrogate model
-# itf.define_surrogate("kfold_2", num_splits=5, epochs=1000, batch_size=32, verbose=True)
-itf.define_surrogate("kfold_2", num_splits=5, epochs=2000, batch_size=64, verbose=True)
+itf.define_surrogate("kfold_2", num_splits=5, epochs=1000, batch_size=32, verbose=True)
+# itf.define_surrogate("kfold_2", num_splits=5, epochs=2000, batch_size=64, verbose=True)
 # itf.define_surrogate("kfold_geodesic", "cpu", num_splits=5, epochs=2000, batch_size=64, verbose=True, geodesic_weight=200)
 itf.add_training_data()
 itf.train()
