@@ -25,7 +25,7 @@ itf.read_data(data_file)
 # Define grain IDs
 data_dict = csv_to_dict(f"data/{data_file}")
 grain_ids = [int(key.replace("_phi_1","").replace("g","")) for key in data_dict.keys() if "_phi_1" in key]
-grain_ids = [207, 79, 164, 167, 309]
+grain_ids = [59, 63, 86, 237, 303]
 
 # Define input and output fields
 input_list = [f"cp_lh_{i}" for i in range(NUM_LH)] + ["cp_tau_0", "cp_n", "cp_gamma_0", STRAIN_FIELD]
