@@ -123,6 +123,16 @@ class Controller:
         self.valid_input = [self.train_input[i] for i in range(len(self.train_input)) if i in valid_indexes]
         self.valid_output = [self.train_output[i] for i in range(len(self.train_output)) if i in valid_indexes]
 
+    def set_num_threads(self, num_threads:int) -> None:
+        """
+        Sets the number of threads to use in the training
+
+        Parameters:
+        * `num_threads`: The number of threads to use
+        """
+        import torch
+        torch.set_num_threads(num_threads)
+
     def define_surrogate(self, surrogate_name:str, device_name:str=None, **kwargs) -> None:
         """
         Defines the surrogate

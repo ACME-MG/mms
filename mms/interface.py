@@ -124,6 +124,16 @@ class Interface:
             self.__print__(f"Adding {round(ratio*100)}% of the data points to the validation dataset")
         self.__controller__.add_validation_data(ratio)
     
+    def set_num_threads(self, num_threads:int) -> None:
+        """
+        Sets the number of threads to use in the training
+
+        Parameters:
+        * `num_threads`: The number of threads to use
+        """
+        self.__print__(f"Setting the number of threads to {num_threads}")
+        self.__controller__.set_num_threads(num_threads)
+
     def define_surrogate(self, surrogate_name:str, device_name:str=None, **kwargs) -> None:
         """
         Defines the surrogate
